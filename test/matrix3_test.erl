@@ -11,4 +11,10 @@
 -include_lib("eunit/include/eunit.hrl").
 
 matrix3_test() ->
+    {
+        1.0, 0.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 1.0
+    } = matrix3:new(),
+
     ok.
