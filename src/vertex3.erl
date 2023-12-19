@@ -1,0 +1,2 @@
+-module(vertex3).
+-export([]).

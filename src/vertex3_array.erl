@@ -1,0 +1,2 @@
+-module(vertex3_array).
+-export([]).

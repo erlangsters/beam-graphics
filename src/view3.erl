@@ -1,0 +1,2 @@
+-module(view3).
+-export([]).
