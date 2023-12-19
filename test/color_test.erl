@@ -11,4 +11,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 color_test() ->
+    {0.0, 0.0, 0.0, 1.0} = color:new(),
+
     ok.

@@ -2,6 +2,7 @@
 
 -export_type([vector2/0, vector3/0]).
 -export_type([matrix3/0, matrix4/0]).
+-export_type([color/0]).
 
 -export([]).
 
@@ -28,4 +29,11 @@
     E :: float(), F :: float(), G :: float(), H :: float(),
     I :: float(), J :: float(), K :: float(), L :: float(),
     M :: float(), N :: float(), O :: float(), P :: float()
+}.
+
+-type color() :: {
+    R :: float(),
+    G :: float(),
+    B :: float(),
+    A :: float()
 }.

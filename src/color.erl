@@ -8,4 +8,17 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, December 2023
 %%
 -module(color).
--export([]).
+-export([new/0]).
+
+%%
+%% The color module.
+%%
+%% To be written.
+%%
+
+%%
+%% To be written.
+%%
+-spec new() -> bml:color().
+new() ->
+    {0.0, 0.0, 0.0, 1.0}.
