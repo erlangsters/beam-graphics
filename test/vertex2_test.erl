@@ -11,4 +11,11 @@
 -include_lib("eunit/include/eunit.hrl").
 
 vertex2_test() ->
+    {
+        {0.0, 0.0},
+        {0.0, 0.0, 0.0, 1.0},
+        0.0,
+        0.0
+    } = vertex2:new(),
+
     ok.

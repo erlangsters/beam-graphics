@@ -3,6 +3,7 @@
 -export_type([vector2/0, vector3/0]).
 -export_type([matrix3/0, matrix4/0]).
 -export_type([color/0]).
+-export_type([vertex2/0, vertex3/0]).
 
 -export([]).
 
@@ -36,4 +37,17 @@
     G :: float(),
     B :: float(),
     A :: float()
+}.
+
+-type vertex2() :: {
+    Coordinate :: vector2(),
+    Color :: color(),
+    U :: float(),
+    V :: float()
+}.
+-type vertex3() :: {
+    Coordinate :: vector3(),
+    Color :: color(),
+    U :: float(),
+    V :: float()
 }.

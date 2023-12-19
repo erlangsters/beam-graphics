@@ -8,4 +8,22 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, December 2023
 %%
 -module(vertex2).
--export([]).
+-export([new/0]).
+
+%%
+%% The vertex2 module.
+%%
+%% To be written.
+%%
+
+%%
+%% To be written.
+%%
+-spec new() -> bml:vertex2().
+new() ->
+    {
+        vector2:new(),
+        color:new(),
+        0.0,
+        0.0
+    }.
