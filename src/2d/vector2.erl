@@ -8,4 +8,17 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, December 2023
 %%
 -module(vector2).
--export([]).
+-export([new/0]).
+
+%%
+%% The vector2 module.
+%%
+%% To be written.
+%%
+
+%%
+%% To be written.
+%%
+-spec new() -> bml:vector2().
+new() ->
+    {0.0, 0.0}.

@@ -11,4 +11,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 vector3_test() ->
+    {0.0, 0.0, 0.0} = vector3:new(),
+
     ok.
