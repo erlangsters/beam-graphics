@@ -12,6 +12,8 @@
 -export_type([image/0]).
 -export_type([texture/0]).
 
+-export_type([shader/0]).
+
 -export([]).
 
 %%
@@ -73,3 +75,5 @@
 
 -type image() :: term().
 -type texture() :: reference().
+
+-type shader() :: reference().
