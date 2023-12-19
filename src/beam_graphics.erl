@@ -9,6 +9,8 @@
 -export_type([vertex2_array/0]).
 -export_type([vertex3_array/0]).
 
+-export_type([image/0]).
+
 -export([]).
 
 %%
@@ -67,3 +69,5 @@
 
 -type vertex2_array() :: reference().
 -type vertex3_array() :: reference().
+
+-type image() :: term().
