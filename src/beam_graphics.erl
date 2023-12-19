@@ -17,6 +17,7 @@
 -export_type([transform2/0, transform3/0]).
 
 -export_type([view2/0, view3/0]).
+-export_type([surface/0]).
 
 -export([]).
 
@@ -87,3 +88,4 @@
 
 -type view2() :: term().
 -type view3() :: term().
+-type surface() :: reference().

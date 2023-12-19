@@ -8,4 +8,17 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, December 2023
 %%
 -module(surface).
--export([]).
+-export([new/0]).
+
+%%
+%% The surface module.
+%%
+%% To be written.
+%%
+
+%%
+%% To be written.
+%%
+-spec new() -> bml:surface().
+new() ->
+    ok.
