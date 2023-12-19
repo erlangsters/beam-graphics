@@ -10,6 +10,7 @@
 -export_type([vertex3_array/0]).
 
 -export_type([image/0]).
+-export_type([texture/0]).
 
 -export([]).
 
@@ -71,3 +72,4 @@
 -type vertex3_array() :: reference().
 
 -type image() :: term().
+-type texture() :: reference().
