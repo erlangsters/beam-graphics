@@ -8,4 +8,17 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, December 2023
 %%
 -module(view3).
--export([]).
+-export([new/0]).
+
+%%
+%% The view3 module.
+%%
+%% To be written.
+%%
+
+%%
+%% To be written.
+%%
+-spec new() -> bml:view3().
+new() ->
+    ok.
