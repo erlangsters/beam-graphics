@@ -4,6 +4,7 @@
 -export_type([matrix3/0, matrix4/0]).
 -export_type([color/0]).
 -export_type([vertex2/0, vertex3/0]).
+-export_type([box2/0, box3/0]).
 
 -export([]).
 
@@ -50,4 +51,13 @@
     Color :: color(),
     U :: float(),
     V :: float()
+}.
+
+-type box2() :: {
+    Position :: vector2(),
+    Size :: vector2()
+}.
+-type box3() :: {
+    Position :: vector3(),
+    Size :: vector3()
 }.

@@ -8,4 +8,20 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, December 2023
 %%
 -module(box2).
--export([]).
+-export([new/0]).
+
+%%
+%% The box2 module.
+%%
+%% To be written.
+%%
+
+%%
+%% To be written.
+%%
+-spec new() -> bml:box2().
+new() ->
+    {
+        vector2:new(),
+        vector2:new()
+    }.

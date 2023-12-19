@@ -11,4 +11,9 @@
 -include_lib("eunit/include/eunit.hrl").
 
 box2_test() ->
+    {
+        {0.0, 0.0},
+        {0.0, 0.0}
+    } = box2:new(),
+
     ok.
