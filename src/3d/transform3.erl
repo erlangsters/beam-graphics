@@ -8,4 +8,17 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, December 2023
 %%
 -module(transform3).
--export([]).
+-export([new/0]).
+
+%%
+%% The transform3 module.
+%%
+%% To be written.
+%%
+
+%%
+%% To be written.
+%%
+-spec new() -> bml:transform3().
+new() ->
+    ok.
