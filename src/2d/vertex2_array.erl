@@ -8,4 +8,17 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>, December 2023
 %%
 -module(vertex2_array).
--export([]).
+-export([new/0]).
+
+%%
+%% The vertex2_array module.
+%%
+%% To be written.
+%%
+
+%%
+%% To be written.
+%%
+-spec new() -> bml:vertex2_array().
+new() ->
+    ok.

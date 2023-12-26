@@ -6,6 +6,9 @@
 -export_type([vertex2/0, vertex3/0]).
 -export_type([box2/0, box3/0]).
 
+-export_type([vertex2_array/0]).
+-export_type([vertex3_array/0]).
+
 -export([]).
 
 %%
@@ -61,3 +64,6 @@
     Position :: vector3(),
     Size :: vector3()
 }.
+
+-type vertex2_array() :: reference().
+-type vertex3_array() :: reference().
