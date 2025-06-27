@@ -7,7 +7,23 @@
         stdlib
     ]},
     {env, []},
-    {modules, []},
+    {modules, [
+        beam_graphics,
+        vector2, vector3,
+        matrix3, matrix4,
+        box2, box3,
+        transform2, transform3,
+        transformable2, transformable3,
+        view2, view3,
+        color,
+        graphics_context,
+        mesh2, mesh3,
+        texture,
+        program,
+        shape2, shape3,
+        camera2, camera3,
+        surface
+    ]},
     {licenses, ["MIT"]},
     {links, []}
  ]}.
