@@ -8,7 +8,7 @@
     ]},
     {env, []},
     {modules, [
-        beam_graphics,
+        graphics,
         vector2, vector3,
         matrix3, matrix4,
         box2, box3,
