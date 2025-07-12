@@ -20,6 +20,19 @@
 -define(ANGLE_TO_RADIAN(Degree), ((Degree) * ?ANGLE_PI / 180.0)).
 -define(ANGLE_TO_DEGREE(Radian), ((Radian) * 180.0 / ?ANGLE_PI)).
 
+-define(VECTOR2_ZERO, {0.0, 0.0}).
+-define(VECTOR3_ZERO, {0.0, 0.0, 0.0}).
+
+-define(MATRIX3_ZERO, {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}).
+-define(MATRIX3_IDENTITY, {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}).
+
+-define(MATRIX4_ZERO,
+    {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
+).
+-define(MATRIX4_IDENTITY,
+    {1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0}
+).
+
 -define(COLOR_BLACK, {0, 0, 0, 255}).
 -define(COLOR_WHITE, {255, 255, 255, 255}).
 -define(COLOR_RED, {255, 0, 0, 255}).
