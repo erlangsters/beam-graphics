@@ -7,6 +7,25 @@
 %%
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>
 %%
--module(beam_graphics).
+-module(graphics).
+-moduledoc """
+To be written.
 
--export([]).
+To be written.
+""".
+
+-export_type([
+    color/0
+]).
+
+-doc """
+A RGBA color.
+
+To be written.
+""".
+-type color() :: {
+    Red :: color:channel(),
+    Green :: color:channel(),
+    Blue :: color:channel(),
+    Alpha :: color:channel()
+}.
