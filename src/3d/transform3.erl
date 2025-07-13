@@ -13,14 +13,69 @@ To be written.
 
 To be written.
 """.
-
--export([foobar/0]).
+-export([
+    translation/1,
+    rotation/2,
+    scale/1
+]).
+-export([
+    transform_point/2,
+    transform_direction/2
+]).
 
 -doc """
 To be written.
 
 To be written.
 """.
--spec foobar() -> integer().
-foobar() ->
-    42.
+-spec translation(graphics:vector3()) -> graphics:matrix4().
+translation({OffsetX, OffsetY, OffsetZ}) ->
+    {
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        OffsetX, OffsetY, OffsetZ, 1.0
+    }.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec rotation(graphics:angle(), graphics:vector3()) -> graphics:matrix4().
+rotation(_Angle, _Axis) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec scale(graphics:vector3()) -> graphics:matrix4().
+scale({FactorX, FactorY, FactorZ}) ->
+    {
+        FactorX, 0.0, 0.0, 0.0,
+        0.0, FactorY, 0.0, 0.0,
+        0.0, 0.0, FactorZ, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    }.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec transform_point(graphics:matrix4(), graphics:vector3()) ->
+    graphics:vector3().
+transform_point(_Matrix, _Point) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec transform_direction(graphics:matrix4(), graphics:vector3()) ->
+    graphics:vector3().
+transform_direction(_Matrix, _Direction) ->
+    ok.

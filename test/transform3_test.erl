@@ -9,6 +9,19 @@
 %%
 -module(transform3_test).
 -include_lib("eunit/include/eunit.hrl").
+-include_lib("beam_graphics/include/graphics.hrl").
 
-transform3_test() ->
+transform3_translation_test() ->
+    ok.
+
+transform3_rotation_test() ->
+    ok.
+
+transform3_scale_test() ->
+    ok.
+
+transform3_transform_point_test() ->
+    ok.
+
+transform3_transform_direction_test() ->
     ok.
