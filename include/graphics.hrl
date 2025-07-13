@@ -8,6 +8,18 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>
 %%
 
+-define(ANGLE_PI, 3.14159265358979323846).
+
+-define(ANGLE_ZERO, 0.0).
+-define(ANGLE_45, 0.78539816339744830962).
+-define(ANGLE_90, 1.57079632679489661923).
+-define(ANGLE_180, 3.14159265358979323846).
+-define(ANGLE_270, 4.71238898038468985769).
+-define(ANGLE_360, 6.28318530717958647692).
+
+-define(ANGLE_TO_RADIAN(Degree), ((Degree) * ?ANGLE_PI / 180.0)).
+-define(ANGLE_TO_DEGREE(Radian), ((Radian) * 180.0 / ?ANGLE_PI)).
+
 -define(COLOR_BLACK, {0, 0, 0, 255}).
 -define(COLOR_WHITE, {255, 255, 255, 255}).
 -define(COLOR_RED, {255, 0, 0, 255}).

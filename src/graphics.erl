@@ -15,8 +15,16 @@ To be written.
 """.
 
 -export_type([
+    angle/0,
     color/0
 ]).
+
+-doc """
+An angle in radians.
+
+To be written.
+""".
+-type angle() :: float().
 
 -doc """
 A RGBA color.
