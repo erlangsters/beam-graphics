@@ -10,5 +10,14 @@
 -module(view3_test).
 -include_lib("eunit/include/eunit.hrl").
 
-view3_test() ->
+view3_orthographic_test() ->
+    ok.
+
+view3_perspective_test() ->
+    ok.
+
+view3_look_at_test() ->
+    ok.
+
+view3_frustum_test() ->
     ok.
