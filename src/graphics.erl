@@ -20,7 +20,9 @@ To be written.
     vector3/0,
     matrix3/0,
     matrix4/0,
-    color/0
+    color/0,
+    box2/0,
+    box3/0
 ]).
 
 -doc """
@@ -116,4 +118,24 @@ To be written.
     Green :: color:channel(),
     Blue :: color:channel(),
     Alpha :: color:channel()
+}.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-type box2() :: {
+    Min :: vector2(),
+    Max :: vector2()
+}.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-type box3() :: {
+    Min :: vector3(),
+    Max :: vector3()
 }.
