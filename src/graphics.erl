@@ -26,7 +26,9 @@ To be written.
 ]).
 -export_type([
     vertex2/0,
-    vertex3/0
+    vertex3/0,
+    mesh2/0,
+    mesh3/0
 ]).
 -export([
     initialize/1,
@@ -172,6 +174,29 @@ To be written.
     V :: float()
 }.
 
+-doc """
+2D mesh object.
+
+A collection of 2D vertices that can be rendered on a surface.
+
+Use the `mesh2` module to create and manipulate 2D meshes.
+""".
+-type mesh2() :: mesh2:object().
+
+-doc """
+3D mesh object.
+
+A collection of 3D vertices that can be rendered on a surface.
+
+Use the `mesh3` module to create and manipulate 3D meshes.
+""".
+-type mesh3() :: mesh3:object().
+
+-doc """
+To be written.
+
+To be written.
+""".
 -spec initialize(egl:display()) -> ok.
 initialize(Display) ->
     graphics_context:start(Display),
