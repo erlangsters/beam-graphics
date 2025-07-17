@@ -24,6 +24,10 @@ To be written.
     box2/0,
     box3/0
 ]).
+-export([
+    initialize/1,
+    terminate/0
+]).
 
 -doc """
 An angle in radians.
@@ -139,3 +143,23 @@ To be written.
     Min :: vector3(),
     Max :: vector3()
 }.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec initialize(egl:display()) -> ok.
+initialize(Display) ->
+    graphics_context:start(Display),
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec terminate() -> ok.
+terminate() ->
+    ok = graphics_context:stop(),
+    ok.
