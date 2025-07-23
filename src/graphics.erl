@@ -27,7 +27,8 @@ To be written.
 -export_type([
     vertex2/0, vertex3/0,
     mesh2/0, mesh3/0,
-    texture/0
+    texture/0,
+    program/0
 ]).
 -export([
     initialize/1,
@@ -203,6 +204,8 @@ To be written.
 
 To be written.
 """.
+-type program() :: program:object().
+
 -spec initialize(egl:display()) -> ok.
 initialize(Display) ->
     graphics_context:start(Display),
