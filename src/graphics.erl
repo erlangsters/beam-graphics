@@ -25,10 +25,9 @@ To be written.
     box3/0
 ]).
 -export_type([
-    vertex2/0,
-    vertex3/0,
-    mesh2/0,
-    mesh3/0
+    vertex2/0, vertex3/0,
+    mesh2/0, mesh3/0,
+    texture/0
 ]).
 -export([
     initialize/1,
@@ -191,6 +190,13 @@ A collection of 3D vertices that can be rendered on a surface.
 Use the `mesh3` module to create and manipulate 3D meshes.
 """.
 -type mesh3() :: mesh3:object().
+
+-doc """
+To be written.
+
+To be written.
+""".
+-type texture() :: texture:object().
 
 -doc """
 To be written.
