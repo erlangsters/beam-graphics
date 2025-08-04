@@ -42,3 +42,43 @@
 -define(COLOR_CYAN, {0, 255, 255, 255}).
 -define(COLOR_MAGENTA, {255, 0, 255, 255}).
 -define(COLOR_TRANSPARENT, {0, 0, 0, 0}).
+
+-define(VERTEX2(Position),
+    begin
+        {
+            element(1, Position), element(2, Position),
+            ?COLOR_BLACK,
+            0.0, 0.0
+        }
+    end
+).
+
+-define(VERTEX2(Position, Color),
+    begin
+        {
+            element(1, Position), element(2, Position),
+            Color,
+            0.0, 0.0
+        }
+    end
+).
+
+-define(VERTEX3(Position),
+    begin
+        {
+            element(1, Position), element(2, Position), element(3, Position),
+            ?COLOR_BLACK,
+            0.0, 0.0
+        }
+    end
+).
+
+-define(VERTEX3(Position, Color),
+    begin
+        {
+            element(1, Position), element(2, Position), element(3, Position),
+            Color,
+            0.0, 0.0
+        }
+    end
+).

@@ -24,6 +24,10 @@ To be written.
     box2/0,
     box3/0
 ]).
+-export_type([
+    vertex2/0,
+    vertex3/0
+]).
 -export([
     initialize/1,
     terminate/0
@@ -149,6 +153,25 @@ To be written.
 
 To be written.
 """.
+-type vertex2() :: {
+    Position :: vector2(),
+    Color :: color(),
+    U :: float(),
+    V :: float()
+}.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-type vertex3() :: {
+    Position :: vector3(),
+    Color :: color(),
+    U :: float(),
+    V :: float()
+}.
+
 -spec initialize(egl:display()) -> ok.
 initialize(Display) ->
     graphics_context:start(Display),

@@ -17,6 +17,7 @@
         view2, view3,
         color,
         graphics_context,
+        vertex2, vertex3,
         mesh2, mesh3,
         texture,
         program,
