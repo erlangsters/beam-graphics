@@ -34,6 +34,9 @@ To be written.
     primitive_type/0,
     vertex_count/0
 ]).
+-export_type([
+    surface/0
+]).
 
 -export([
     initialize/1,
@@ -232,6 +235,13 @@ To be written.
 To be written.
 """.
 -type vertex_count() :: non_neg_integer().
+
+-doc """
+To be written.
+
+To be written.
+""".
+-type surface() :: surface:object().
 
 -doc """
 To be written.
