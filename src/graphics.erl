@@ -36,6 +36,9 @@ To be written.
     shape2/0, shape3/0
 ]).
 -export_type([
+    camera2/0, camera3/0
+]).
+-export_type([
     surface/0
 ]).
 
@@ -252,6 +255,20 @@ To be written.
 To be written.
 """.
 -type shape3() :: #shape3{}.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-type camera2() :: term().
+
+-doc """
+To be written.
+
+To be written.
+""".
+-type camera3() :: term().
 
 -doc """
 To be written.
