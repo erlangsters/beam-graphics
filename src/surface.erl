@@ -39,6 +39,8 @@ To be written.
     clear/2,
     draw_mesh2/4, draw_mesh2/5, draw_mesh2/6,
     draw_mesh3/4, draw_mesh3/5, draw_mesh3/6,
+    draw_shape2/2,
+    draw_shape3/2,
     display/1
 ]).
 -export([
@@ -343,6 +345,46 @@ draw_mesh3({WorkerId, _}, Mesh, PrimitiveType, VertexCount, Texture, Matrix) ->
     },
     {reply, ok} = worker:request(WorkerId, Request),
     ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec draw_shape2(object(), graphics:shape2()) -> ok.
+draw_shape2(
+    Surface,
+    #shape2{
+        meshes = Meshes,
+        texture = Texture,
+        matrix = Matrix
+    }
+) ->
+    % XXX: It should be matrix3 which is later converted.
+    % XXX: this can be optimized.
+    lists:foreach(fun({Mesh, PrimitiveType, VertexCount}) ->
+        draw_mesh2(Surface, Mesh, PrimitiveType, VertexCount, Texture, Matrix)
+    end, Meshes).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec draw_shape3(object(), graphics:shape3()) -> ok.
+draw_shape3(
+    Surface,
+    #shape3{
+        meshes = Meshes,
+        texture = Texture,
+        matrix = Matrix
+    }
+) ->
+    % XXX: It should be matrix3 which is later converted.
+    % XXX: this can be optimized.
+    lists:foreach(fun({Mesh, PrimitiveType, VertexCount}) ->
+        draw_mesh3(Surface, Mesh, PrimitiveType, VertexCount, Texture, Matrix)
+    end, Meshes).
 
 -doc """
 To be written.
