@@ -32,7 +32,8 @@ To be written.
 ]).
 -export_type([
     primitive_type/0,
-    vertex_count/0
+    vertex_count/0,
+    shape2/0, shape3/0
 ]).
 -export_type([
     surface/0
@@ -42,6 +43,8 @@ To be written.
     initialize/1,
     terminate/0
 ]).
+
+-include_lib("beam_graphics/include/graphics.hrl").
 
 -doc """
 An angle in radians.
@@ -235,6 +238,20 @@ To be written.
 To be written.
 """.
 -type vertex_count() :: non_neg_integer().
+
+-doc """
+To be written.
+
+To be written.
+""".
+-type shape2() :: #shape2{}.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-type shape3() :: #shape3{}.
 
 -doc """
 To be written.

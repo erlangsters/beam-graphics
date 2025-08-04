@@ -82,3 +82,15 @@
         }
     end
 ).
+
+-record(shape2, {
+    meshes :: [{mesh2:mesh(), graphics:primitive_type(), graphics:vertex_count()}],
+    matrix = ?MATRIX3_IDENTITY :: graphics:matrix3(),
+    texture = no_texture :: no_texture | graphics:texture()
+}).
+
+-record(shape3, {
+    meshes :: [{mesh3:mesh(), graphics:primitive_type(), graphics:vertex_count()}],
+    matrix = ?MATRIX4_IDENTITY :: graphics:matrix4(),
+    texture = no_texture  :: no_texture | graphics:texture()
+}).
