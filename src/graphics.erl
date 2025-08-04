@@ -30,6 +30,11 @@ To be written.
     texture/0,
     program/0
 ]).
+-export_type([
+    primitive_type/0,
+    vertex_count/0
+]).
+
 -export([
     initialize/1,
     terminate/0
@@ -206,6 +211,33 @@ To be written.
 """.
 -type program() :: program:object().
 
+-doc """
+To be written.
+
+To be written.
+""".
+-type primitive_type() ::
+    points |
+    lines |
+    line_strip |
+    line_loop |
+    triangles |
+    triangle_strip |
+    triangle_fan
+.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-type vertex_count() :: non_neg_integer().
+
+-doc """
+To be written.
+
+To be written.
+""".
 -spec initialize(egl:display()) -> ok.
 initialize(Display) ->
     graphics_context:start(Display),
