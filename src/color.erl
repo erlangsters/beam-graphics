@@ -34,7 +34,7 @@ channels. It defines the RGBA color type, where each channel ranges from 0 to 25
     argb/4
 ]).
 
--type channel() :: 1..256.
+-type channel() :: float().
 
 -doc """
 The red component of a color.
@@ -93,8 +93,8 @@ It creates a color from three integers representing the red, green and blue
 components, each ranging from 0 to 255, and returns a color tuple with alpha
 set to 255.
 """.
--spec rgb(channel(), channel(), channel()) -> bml:color().
-rgb(Red, Green, Blue) ->
+-spec rgb(channel(), channel(), channel()) -> graphics:color().
+rgb(Red, Green, Blue) -> % XXX: Should guard against invalid value.
     {Red, Green, Blue, 255}.
 
 -doc """
@@ -103,8 +103,8 @@ Create a color from RGBA components.
 It takes four integers representing the red, green, blue and alpha components
 of the color, each ranging from 0 to 255, and returns a color tuple.
 """.
--spec rgba(channel(), channel(), channel(), channel()) -> bml:color().
-rgba(Red, Green, Blue, Alpha) ->
+-spec rgba(channel(), channel(), channel(), channel()) -> graphics:color().
+rgba(Red, Green, Blue, Alpha) -> % XXX: Should guard against invalid value.
     {Red, Green, Blue, Alpha}.
 
 -doc """
@@ -113,6 +113,6 @@ Create a color from ARGB components.
 It takes four integers representing the alpha, red, green and blue components
 of the color, each ranging from 0 to 255, and returns a color tuple.
 """.
--spec argb(channel(), channel(), channel(), channel()) -> bml:color().
-argb(Alpha, Red, Green, Blue) ->
+-spec argb(channel(), channel(), channel(), channel()) -> graphics:color().
+argb(Alpha, Red, Green, Blue) -> % XXX: Should guard against invalid value.
     {Red, Green, Blue, Alpha}.
