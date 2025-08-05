@@ -25,6 +25,9 @@ To be written.
     triangle/4
 ]).
 -export([
+    triangle_wires/4
+]).
+-export([
     rectangle/3,
     rectangle_outline/4
 ]).
@@ -41,6 +44,9 @@ To be written.
     point/2,
     line/3,
     triangle/4
+]}).
+-compile({inline, [
+    triangle_wires/4
 ]}).
 
 -include_lib("beam_graphics/include/graphics.hrl").
@@ -171,6 +177,27 @@ triangle(A, B, C, Color) ->
         ?VERTEX2(C, Color)
     ]),
     shape2:with_mesh(Mesh, triangles, 3).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec triangle_wires(
+    graphics:vector2(),
+    graphics:vector2(),
+    graphics:vector2(),
+    graphics:color()
+) ->
+    graphics:shape2()
+.
+triangle_wires(A, B, C, Color) ->
+    {ok, Mesh} = mesh2:with_vertices([
+        ?VERTEX2(A, Color),
+        ?VERTEX2(B, Color),
+        ?VERTEX2(C, Color)
+    ]),
+    shape2:with_mesh(Mesh, line_loop, 3).
 
 -doc """
 To be written.
