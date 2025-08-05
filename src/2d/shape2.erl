@@ -24,6 +24,10 @@ To be written.
     line/3,
     triangle/4
 ]).
+-export([
+    rectangle/3,
+    rectangle_outline/4
+]).
 
 -compile({inline, [
     with_mesh/3, with_mesh/4,
@@ -161,3 +165,112 @@ triangle(A, B, C, Color) ->
         ?VERTEX2(C, Color)
     ]),
     shape2:with_mesh(Mesh, triangles, 3).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec rectangle(
+    Position :: graphics:vector2(),
+    Size :: graphics:vector2(),
+    Color :: graphics:color()
+) -> graphics:shape2().
+rectangle({X, Y}, {Width, Height}, Color) ->
+    {ok, Mesh} = mesh2:with_vertices([
+        ?VERTEX2({X,         Y},          Color),
+        ?VERTEX2({X + Width, Y},          Color),
+        ?VERTEX2({X + Width, Y + Height}, Color),
+        ?VERTEX2({X,         Y + Height}, Color)
+    ]),
+    shape2:with_mesh(Mesh, triangle_fan, 4).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec rectangle_outline(
+    Position :: graphics:vector2(),
+    Size :: graphics:vector2(),
+    Thickness :: float(),
+    Color :: graphics:color()
+) -> graphics:shape2().
+rectangle_outline({X, Y}, {Width, Height}, Thickness, Color) ->
+    % XXX: The outline points inwards (regardless of the sign of the thickness.
+    %      Should it support both directions?
+    OuterX0 = X,
+    OuterY0 = Y,
+    OuterX1 = X + Width,
+    OuterY1 = Y + Height,
+
+    % Determine direction of thickness
+    Sign = if Thickness > 0 -> 1; true -> -1 end,
+    AbsT = erlang:abs(Thickness),
+
+    % For positive thickness, outline grows "outwards" (Y+AbsT), for negative "inwards" (Y-AbsT)
+    InnerX0 = X + Sign * AbsT,
+    InnerY0 = Y + Sign * AbsT,
+    InnerX1 = X + Width - Sign * AbsT,
+    InnerY1 = Y + Height - Sign * AbsT,
+
+    % Vertices for the outline as a triangle strip (8 vertices, 4 corners, 2 per corner)
+    {ok, Mesh} = mesh2:with_vertices([
+        ?VERTEX2({OuterX0, OuterY0}, Color), % Outer TL
+        ?VERTEX2({InnerX0, InnerY0}, Color), % Inner TL
+
+        ?VERTEX2({OuterX1, OuterY0}, Color), % Outer TR
+        ?VERTEX2({InnerX1, InnerY0}, Color), % Inner TR
+
+        ?VERTEX2({OuterX1, OuterY1}, Color), % Outer BR
+        ?VERTEX2({InnerX1, InnerY1}, Color), % Inner BR
+
+        ?VERTEX2({OuterX0, OuterY1}, Color), % Outer BL
+        ?VERTEX2({InnerX0, InnerY1}, Color), % Inner BL
+
+        ?VERTEX2({OuterX0, OuterY0}, Color), % Repeat Outer TL
+        ?VERTEX2({InnerX0, InnerY0}, Color)  % Repeat Inner TL
+    ]),
+
+    % Use triangle_strip for the outline
+    shape2:with_mesh(Mesh, triangle_strip, 10).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec circle(
+) -> graphics:shape2().
+circle() ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec circle_outline(
+) -> graphics:shape2().
+circle_outline() ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec rectangle_wire(
+) -> graphics:shape2().
+rectangle_wire() ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec circle_wire(
+) -> graphics:shape2().
+circle_wire() ->
+    ok.
