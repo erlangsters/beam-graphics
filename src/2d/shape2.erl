@@ -35,6 +35,10 @@ To be written.
     circle/3, circle/4,
     circle_outline/4, circle_outline/5
 ]).
+-export([
+    rectangle_wires/3,
+    circle_wires/3, circle_wires/4
+]).
 
 -compile({inline, [
     with_mesh/3, with_mesh/4,
@@ -364,37 +368,55 @@ To be written.
 
 To be written.
 """.
--spec rectangle_wire(
+-spec rectangle_wires(
+    Position :: graphics:vector2(),
+    Size :: graphics:vector2(),
+    Color :: graphics:color()
 ) -> graphics:shape2().
-rectangle_wire() ->
-    ok.
+rectangle_wires({X, Y}, {Width, Height}, Color) ->
+    % Rectangle corners in order: TL, TR, BR, BL
+    Vertices = [
+        ?VERTEX2({X,         Y},          Color), % Top-left
+        ?VERTEX2({X + Width, Y},          Color), % Top-right
+        ?VERTEX2({X + Width, Y + Height}, Color), % Bottom-right
+        ?VERTEX2({X,         Y + Height}, Color)  % Bottom-left
+    ],
+    {ok, Mesh} = mesh2:with_vertices(Vertices),
+    % Use line_loop to connect all corners and close the rectangle
+    shape2:with_mesh(Mesh, line_loop, 4).
 
 -doc """
 To be written.
 
 To be written.
 """.
--spec circle_wire(
+-spec circle_wires(
+    Center :: graphics:vector2(),
+    Radius :: float(),
+    Color :: graphics:color()
 ) -> graphics:shape2().
-circle_wire() ->
-    ok.
+circle_wires(Center, Radius, Color) ->
+    circle_wires(Center, Radius, ?DEFAULT_CIRCLE_SEGMENTS, Color).
 
 -doc """
 To be written.
 
 To be written.
 """.
--spec circle(
+-spec circle_wires(
+    Center :: graphics:vector2(),
+    Radius :: float(),
+    Segments :: non_neg_integer(),
+    Color :: graphics:color()
 ) -> graphics:shape2().
-circle() ->
-    ok.
-
--doc """
-To be written.
-
-To be written.
-""".
--spec circle_outline(
-) -> graphics:shape2().
-circle_outline() ->
-    ok.
+circle_wires({X, Y}, Radius, Segments, Color) ->
+    AngleStep = (2 * math:pi()) / Segments,
+    Vertices = [
+        ?VERTEX2(
+            {X + Radius * math:cos(AngleStep * I), Y + Radius * math:sin(AngleStep * I)},
+            Color
+        )
+        || I <- lists:seq(0, Segments - 1)
+    ],
+    {ok, Mesh} = mesh2:with_vertices(Vertices),
+    shape2:with_mesh(Mesh, line_loop, Segments).
