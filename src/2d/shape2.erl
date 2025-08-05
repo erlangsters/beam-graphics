@@ -28,6 +28,10 @@ To be written.
     rectangle/3,
     rectangle_outline/4
 ]).
+-export([
+    circle/3, circle/4,
+    circle_outline/4, circle_outline/5
+]).
 
 -compile({inline, [
     with_mesh/3, with_mesh/4,
@@ -40,6 +44,8 @@ To be written.
 ]}).
 
 -include_lib("beam_graphics/include/graphics.hrl").
+
+-define(DEFAULT_CIRCLE_SEGMENTS, 32).
 
 -doc """
 To be written.
@@ -241,9 +247,38 @@ To be written.
 To be written.
 """.
 -spec circle(
+    Center :: graphics:vector2(),
+    Radius :: float(),
+    Color :: graphics:color()
 ) -> graphics:shape2().
-circle() ->
-    ok.
+circle(Center, Radius, Color) ->
+    circle(Center, Radius, ?DEFAULT_CIRCLE_SEGMENTS, Color).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec circle(
+    Center :: graphics:vector2(),
+    Radius :: float(),
+    Segments :: non_neg_integer(),
+    Color :: graphics:color()
+) -> graphics:shape2().
+circle({X, Y}, Radius, Segments, Color) ->
+    AngleStep = (2 * math:pi()) / Segments,
+    Vertices = [
+        ?VERTEX2({X, Y}, Color)  % Center vertex for triangle fan
+        | [
+            ?VERTEX2(
+                {X + Radius * math:cos(AngleStep * I), Y + Radius * math:sin(AngleStep * I)},
+                Color
+            )
+            || I <- lists:seq(0, Segments)
+        ]
+    ],
+    {ok, Mesh} = mesh2:with_vertices(Vertices),
+    shape2:with_mesh(Mesh, triangle_fan, Segments + 2).
 
 -doc """
 To be written.
@@ -251,9 +286,51 @@ To be written.
 To be written.
 """.
 -spec circle_outline(
+    Center :: graphics:vector2(),
+    Radius :: float(),
+    Thickness :: float(),
+    Color :: graphics:color()
 ) -> graphics:shape2().
-circle_outline() ->
-    ok.
+circle_outline(Center, Radius, Thickness, Color) ->
+    circle_outline(Center, Radius, ?DEFAULT_CIRCLE_SEGMENTS, Thickness, Color).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec circle_outline(
+    Center :: graphics:vector2(),
+    Radius :: float(),
+    Segments :: non_neg_integer(),
+    Thickness :: float(),
+    Color :: graphics:color()
+) -> graphics:shape2().
+circle_outline({X, Y}, Radius, Segments, Thickness, Color) ->
+    AbsT = erlang:abs(Thickness),
+    InnerRadius = Radius - AbsT,
+    AngleStep = (2 * math:pi()) / Segments,
+    % Build vertices for a triangle strip: outer, inner, outer, inner, ...
+    Vertices = lists:flatten([
+        [
+            ?VERTEX2(
+                {X + Radius * math:cos(AngleStep * I), Y + Radius * math:sin(AngleStep * I)},
+                Color
+            ),
+            ?VERTEX2(
+                {X + InnerRadius * math:cos(AngleStep * I), Y + InnerRadius * math:sin(AngleStep * I)},
+                Color
+            )
+        ]
+        || I <- lists:seq(0, Segments)
+    ]),
+    % Close the strip by repeating the first two vertices
+    VerticesClosed = Vertices ++ [
+        ?VERTEX2({X + Radius * math:cos(0), Y + Radius * math:sin(0)}, Color),
+        ?VERTEX2({X + InnerRadius * math:cos(0), Y + InnerRadius * math:sin(0)}, Color)
+    ],
+    {ok, Mesh} = mesh2:with_vertices(VerticesClosed),
+    shape2:with_mesh(Mesh, triangle_strip, length(VerticesClosed)).
 
 -doc """
 To be written.
@@ -273,4 +350,24 @@ To be written.
 -spec circle_wire(
 ) -> graphics:shape2().
 circle_wire() ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec circle(
+) -> graphics:shape2().
+circle() ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec circle_outline(
+) -> graphics:shape2().
+circle_outline() ->
     ok.
