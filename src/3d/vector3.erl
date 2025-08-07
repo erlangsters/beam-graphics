@@ -113,7 +113,8 @@ Beware that a well-formed 3D vector always contains floats, not integers.
 -export([
     add/2,
     subtract/2,
-    multiply/2
+    multiply/2,
+    divide/2
 ]).
 -export([
     is_equal_to/2, is_equal_to/3
@@ -366,6 +367,13 @@ Note that this operation is also called scaling.
 -spec multiply(graphics:vector3(), float()) -> graphics:vector3().
 multiply({X, Y, Z}, Factor) ->
     {Factor * X, Factor * Y, Factor * Z}.
+
+-doc """
+To be written.
+""".
+-spec divide(graphics:vector3(), float()) -> graphics:vector3().
+divide({_X, _Y, _Z}, _Divider) ->
+    ok.
 
 -doc """
 To be written.
