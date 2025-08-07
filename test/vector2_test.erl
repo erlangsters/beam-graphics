@@ -85,6 +85,11 @@ vector2_direction_test() ->
 
     ok.
 
+vector2_angle_test() ->
+    % XXX
+
+    ok.
+
 vector2_project_test() ->
     % XXX
 

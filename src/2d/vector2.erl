@@ -99,7 +99,8 @@ Beware that a well-formed 2D vector always contains floats, not integers.
 ]).
 -export([
     distance/2,
-    direction/2
+    direction/2,
+    angle/2
 ]).
 -export([
     project/2,
@@ -278,6 +279,13 @@ To be written.
 """.
 -spec direction(graphics:vector2(), graphics:vector2()) -> graphics:vector2().
 direction(_V1, _V2) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec angle(graphics:vector3(), graphics:vector3()) -> graphics:angle().
+angle(_V1, _V2) ->
     ok.
 
 -doc """
