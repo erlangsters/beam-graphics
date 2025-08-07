@@ -36,6 +36,11 @@ vector2_normalize_test() ->
 
     ok.
 
+vector2_perpendicular_test() ->
+    % XXX
+
+    ok.
+
 vector2_dot_product_test() ->
     V1 = {1.0, 2.0},
     V2 = {3.0, 4.0},

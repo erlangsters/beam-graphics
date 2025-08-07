@@ -86,6 +86,9 @@ Beware that a well-formed 2D vector always contains floats, not integers.
     normalize/1
 ]).
 -export([
+    perpendicular/1
+]).
+-export([
     dot_product/2,
     cross_product/2
 ]).
@@ -190,6 +193,13 @@ with a length of 1.0.
 normalize({X, Y} = Vector) ->
     Length = vector2:length(Vector),
     {X/Length, Y/Length}.
+
+-doc """
+To be written.
+""".
+-spec perpendicular(graphics:vector2()) -> graphics:vector2().
+perpendicular({X, Y}) ->
+    {-Y, X}.
 
 -doc """
 Compute the dot product of two 2D vectors.
