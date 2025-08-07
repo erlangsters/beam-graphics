@@ -115,6 +115,9 @@ The common mathematical operations are also implemented.
     multiply_vector/2
 ]).
 -export([
+    is_equal_to/2, is_equal_to/3
+]).
+-export([
     to_matrix4/1
 ]).
 -export([
@@ -416,6 +419,25 @@ To be written.
 -spec multiply_vector(graphics:matrix3(), graphics:vector2()) ->
     graphics:matrix3().
 multiply_vector(_Matrix, _Vector) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec is_equal_to(graphics:matrix3(), graphics:matrix3()) -> boolean().
+is_equal_to(_Matrix1, _Matrix2) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec is_equal_to(graphics:matrix3(), graphics:matrix3(), float()) ->
+    boolean().
+is_equal_to(_Matrix1, _Matrix2, _Epsilon) ->
     ok.
 
 -doc """

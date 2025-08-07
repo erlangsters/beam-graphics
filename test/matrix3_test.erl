@@ -272,6 +272,11 @@ matrix3_multiply_vector_test() ->
 
     ok.
 
+matrix3_is_equal_to_test() ->
+    % XXX
+
+    ok.
+
 matrix3_to_matrix4_test() ->
     ok.
 
