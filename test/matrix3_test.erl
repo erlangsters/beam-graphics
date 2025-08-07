@@ -264,3 +264,13 @@ matrix3_multiply_vector_test() ->
 
 matrix3_to_matrix4_test() ->
     ok.
+
+matrix3_lerp_test() ->
+    % XXX
+
+    ok.
+
+matrix3_smooth_lerp_test() ->
+    % XXX
+
+    ok.

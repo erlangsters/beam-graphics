@@ -276,3 +276,13 @@ matrix4_multiply_vector_test() ->
 
 matrix4_to_matrix3_test() ->
     ok.
+
+matrix4_lerp_test() ->
+    % XXX
+
+    ok.
+
+matrix4_smooth_lerp_test() ->
+    % XXX
+
+    ok.

@@ -113,6 +113,10 @@ The common mathematical operations are also implemented.
 -export([
     to_matrix4/1
 ]).
+-export([
+    lerp/3,
+    smooth_lerp/3
+]).
 
 -type vector3() :: graphics:vector3().
 
@@ -405,3 +409,23 @@ to_matrix4({M11, M21, M31, M12, M22, M32, M13, M23, M33}) ->
         0.0, 0.0, 1.0, 0.0,
         M13, M23, 0.0, M33
     }.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec lerp(graphics:matrix3(), graphics:matrix3(), float()) -> graphics:matrix3().
+lerp(_Matrix1, _Matrix2, _T) ->
+    % XXX
+
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec smooth_lerp(graphics:matrix3(), graphics:matrix3(), float()) -> graphics:matrix3().
+smooth_lerp(Matrix1, Matrix2, T) ->
+    lerp(Matrix1, Matrix2, T * T * (3.0 - 2.0 * T)).
