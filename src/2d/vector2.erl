@@ -98,8 +98,9 @@ Beware that a well-formed 2D vector always contains floats, not integers.
     to_vector3/1
 ]).
 -export([
-    min/2,
-    max/2
+    min/2, max/2,
+    abs/1,
+    floor/1, ceil/1, round/1
 ]).
 
 -compile({inline, [
@@ -111,8 +112,9 @@ Beware that a well-formed 2D vector always contains floats, not integers.
     subtract/2,
     multiply/2,
     to_vector3/1,
-    min/2,
-    max/2
+    min/2, max/2,
+    abs/1,
+    floor/1, ceil/1, round/1
 ]}).
 
 -doc """
@@ -272,3 +274,31 @@ the two vectors.
     graphics:vector2().
 max({X1, Y1}, {X2, Y2}) ->
     {erlang:max(X1, X2), erlang:max(Y1, Y2)}.
+
+-doc """
+To be written.
+""".
+-spec abs(graphics:vector2()) -> graphics:vector2().
+abs({X, Y}) ->
+    {erlang:abs(X), erlang:abs(Y)}.
+
+-doc """
+To be written.
+""".
+-spec floor(graphics:vector2()) -> graphics:vector2().
+floor({X, Y}) ->
+    {erlang:float(erlang:floor(X)), erlang:float(erlang:floor(Y))}.
+
+-doc """
+To be written.
+""".
+-spec ceil(graphics:vector2()) -> graphics:vector2().
+ceil({X, Y}) ->
+    {erlang:float(erlang:ceil(X)), erlang:float(erlang:ceil(Y))}.
+
+-doc """
+To be written.
+""".
+-spec round(graphics:vector2()) -> graphics:vector2().
+round({X, Y}) ->
+    {erlang:float(erlang:round(X)), erlang:float(erlang:round(Y))}.

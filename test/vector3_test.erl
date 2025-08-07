@@ -90,3 +90,26 @@ vector3_max_test() ->
     {4.0, 5.0, 6.0} = vector3:max(V1, V2),
 
     ok.
+
+vector3_abs_test() ->
+    {1.0, 2.0, 3.0} = vector3:abs({-1.0, 2.0, 3.0}),
+    {1.0, 2.0, 3.0} = vector3:abs({1.0, -2.0, 3.0}),
+    {1.0, 2.0, 3.0} = vector3:abs({1.0, 2.0, -3.0}),
+
+    ok.
+
+vector3_floor_test() ->
+    {2.0, 2.0, 2.0} = vector3:floor({2.4, 2.6, 2.5}),
+
+    ok.
+
+vector3_ceil_test() ->
+    {3.0, 3.0, 3.0} = vector3:ceil({2.4, 2.6, 2.5}),
+
+    ok.
+
+vector3_round_test() ->
+    {2.0, 3.0, 2.0} = vector3:round({2.4, 2.6, 2.4}),
+    {2.0, 3.0, 3.0} = vector3:round({2.4, 2.6, 2.6}),
+
+    ok.

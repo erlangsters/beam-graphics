@@ -89,3 +89,24 @@ vector2_max_test() ->
     {3.0, 4.0} = vector2:max(V1, V2),
 
     ok.
+
+vector2_abs_test() ->
+    {1.0, 2.0} = vector2:abs({-1.0, 2.0}),
+    {1.0, 2.0} = vector2:abs({1.0, -2.0}),
+
+    ok.
+
+vector2_floor_test() ->
+    {2.0, 2.0} = vector2:floor({2.4, 2.6}),
+
+    ok.
+
+vector2_ceil_test() ->
+    {3.0, 3.0} = vector2:ceil({2.4, 2.6}),
+
+    ok.
+
+vector2_round_test() ->
+    {2.0, 3.0} = vector2:round({2.4, 2.6}),
+
+    ok.
