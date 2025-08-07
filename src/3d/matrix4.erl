@@ -80,7 +80,11 @@ The common mathematical operations are also implemented.
 
 -export([
     zero/0,
-    identity/0
+    is_zero/1
+]).
+-export([
+    identity/0,
+    is_identity/1
 ]).
 -export([
     from_rows/4,
@@ -132,6 +136,17 @@ zero() ->
     }.
 
 -doc """
+To be written.
+
+To be written.
+""".
+-spec is_zero(graphics:matrix4()) -> boolean().
+is_zero(_Matrix) ->
+    % XXX
+
+    ok.
+
+-doc """
 The identity 4x4 matrix.
 
 It constructs a zero 4x4 matrix.
@@ -151,6 +166,17 @@ identity() ->
         0.0, 0.0, 1.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     }.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec is_identity(graphics:matrix4()) -> boolean().
+is_identity(_Matrix) ->
+    % XXX
+
+    ok.
 
 -doc """
 To be written.
