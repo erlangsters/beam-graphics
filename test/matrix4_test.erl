@@ -284,6 +284,16 @@ matrix4_multiply_vector_test() ->
 
     ok.
 
+matrix4_scale_test() ->
+    % XXX
+
+    ok.
+
+matrix4_divide_test() ->
+    % XXX
+
+    ok.
+
 matrix4_is_equal_to_test() ->
     % XXX
 

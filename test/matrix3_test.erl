@@ -272,6 +272,16 @@ matrix3_multiply_vector_test() ->
 
     ok.
 
+matrix3_scale_test() ->
+    % XXX
+
+    ok.
+
+matrix3_divide_test() ->
+    % XXX
+
+    ok.
+
 matrix3_is_equal_to_test() ->
     % XXX
 

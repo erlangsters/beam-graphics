@@ -110,7 +110,9 @@ The common mathematical operations are also implemented.
     add/2,
     subtract/2,
     multiply/2,
-    multiply_vector/2
+    multiply_vector/2,
+    scale/2,
+    divide/2
 ]).
 -export([
     is_equal_to/2, is_equal_to/3
@@ -445,6 +447,24 @@ To be written.
 -spec multiply_vector(graphics:matrix4(), graphics:vector3()) ->
     graphics:matrix4().
 multiply_vector(_Matrix, _Vector) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec scale(graphics:matrix4(), float()) -> graphics:matrix4().
+scale(_Matrix, _Scalar) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec divide(graphics:matrix4(), float()) -> graphics:matrix4().
+divide(_Matrix, _Divider) ->
     ok.
 
 -doc """
