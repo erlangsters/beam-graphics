@@ -105,6 +105,10 @@ Beware that a well-formed 3D vector always contains floats, not integers.
     abs/1,
     floor/1, ceil/1, round/1
 ]).
+-export([
+    to_angle/2,
+    from_angle/2
+]).
 
 -compile({inline, [
     zero/0,
@@ -324,3 +328,17 @@ round({X, Y, Z}) ->
         erlang:float(erlang:round(Y)),
         erlang:float(erlang:round(Z))
     }.
+
+-doc """
+To be written.
+""".
+-spec to_angle(graphics:vector3(), graphics:vector3()) -> graphics:angle().
+to_angle({_X, _Y, _Z}, _Axis) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec from_angle(graphics:angle(), graphics:vector3()) -> graphics:vector3().
+from_angle(_Angle, _Axis) ->
+    ok.

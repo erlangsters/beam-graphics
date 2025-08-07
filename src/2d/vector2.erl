@@ -102,6 +102,10 @@ Beware that a well-formed 2D vector always contains floats, not integers.
     abs/1,
     floor/1, ceil/1, round/1
 ]).
+-export([
+    to_angle/1,
+    from_angle/1
+]).
 
 -compile({inline, [
     zero/0,
@@ -302,3 +306,17 @@ To be written.
 -spec round(graphics:vector2()) -> graphics:vector2().
 round({X, Y}) ->
     {erlang:float(erlang:round(X)), erlang:float(erlang:round(Y))}.
+
+-doc """
+To be written.
+""".
+-spec to_angle(graphics:vector2()) -> graphics:angle().
+to_angle({_X, _Y}) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec from_angle(graphics:angle()) -> graphics:vector2().
+from_angle(_Angle) ->
+    ok.

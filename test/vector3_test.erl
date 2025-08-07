@@ -113,3 +113,13 @@ vector3_round_test() ->
     {2.0, 3.0, 3.0} = vector3:round({2.4, 2.6, 2.6}),
 
     ok.
+
+vector3_to_angle_test() ->
+    % XXX
+
+    ok.
+
+vector3_from_angle_test() ->
+    % XXX
+
+    ok.

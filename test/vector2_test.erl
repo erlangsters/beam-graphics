@@ -110,3 +110,13 @@ vector2_round_test() ->
     {2.0, 3.0} = vector2:round({2.4, 2.6}),
 
     ok.
+
+vector2_to_angle_test() ->
+    % XXX
+
+    ok.
+
+vector2_from_angle_test() ->
+    % XXX
+
+    ok.
