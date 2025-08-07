@@ -45,6 +45,11 @@ vector3_is_zero_test() ->
 
     ok.
 
+vector3_unit_test() ->
+    % XXX
+
+    ok.
+
 vector3_length_test() ->
     V = {3.0, 4.0, 5.0},
     7.0710678118654755 = vector3:length(V),

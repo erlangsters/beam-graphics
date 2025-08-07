@@ -39,6 +39,11 @@ vector2_is_zero_test() ->
 
     ok.
 
+vector2_unit_test() ->
+    % XXX
+
+    ok.
+
 vector2_length_test() ->
     V = {3.0, 4.0},
     5.0 = vector2:length(V),

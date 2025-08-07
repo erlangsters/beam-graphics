@@ -83,6 +83,10 @@ Beware that a well-formed 2D vector always contains floats, not integers.
     is_zero/1
 ]).
 -export([
+    unit/1,
+    is_unit/1
+]).
+-export([
     length/1,
     normalize/1
 ]).
@@ -188,6 +192,20 @@ is_zero({-0.0, +0.0}) ->
     true;
 is_zero(_Vector) ->
     false.
+
+-doc """
+To be written.
+""".
+-spec unit(graphics:vector2()) -> graphics:vector2().
+unit(_Vector) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec is_unit(graphics:vector2()) -> boolean().
+is_unit(_Vector) ->
+    ok.
 
 -doc """
 Compute the length of a 2D vector.
