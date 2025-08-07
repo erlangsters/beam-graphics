@@ -115,6 +115,9 @@ Beware that a well-formed 2D vector always contains floats, not integers.
     multiply/2
 ]).
 -export([
+    is_equal_to/2, is_equal_to/3
+]).
+-export([
     to_vector3/1
 ]).
 -export([
@@ -347,6 +350,20 @@ Note that this operation is also called scaling.
 -spec multiply(graphics:vector2(), float()) -> graphics:vector2().
 multiply({X, Y}, Factor) ->
     {Factor * X, Factor * Y}.
+
+-doc """
+To be written.
+""".
+-spec is_equal_to(graphics:vector2(), graphics:vector2()) -> boolean().
+is_equal_to(_V1, _V2) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec is_equal_to(graphics:vector2(), graphics:vector2(), float()) -> boolean().
+is_equal_to(_V1, _V2, _Epsilon) ->
+    ok.
 
 -doc """
 Augment a 2D vector.

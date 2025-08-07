@@ -115,6 +115,9 @@ Beware that a well-formed 3D vector always contains floats, not integers.
     multiply/2
 ]).
 -export([
+    is_equal_to/2, is_equal_to/3
+]).
+-export([
     to_vector2/1
 ]).
 -export([
@@ -354,6 +357,20 @@ Note that this operation is also called scaling.
 -spec multiply(graphics:vector3(), float()) -> graphics:vector3().
 multiply({X, Y, Z}, Factor) ->
     {Factor * X, Factor * Y, Factor * Z}.
+
+-doc """
+To be written.
+""".
+-spec is_equal_to(graphics:vector3(), graphics:vector3()) -> boolean().
+is_equal_to(_V1, _V2) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec is_equal_to(graphics:vector3(), graphics:vector3(), float()) -> boolean().
+is_equal_to(_V1, _V2, _Epsilon) ->
+    ok.
 
 -doc """
 Reduce a 3D vector.

@@ -126,6 +126,11 @@ vector3_multiply_test() ->
 
     ok.
 
+vector3_is_equal_to_test() ->
+    % XXX
+
+    ok.
+
 vector3_to_vector2_test() ->
     V = {1.0, 2.0, 3.0},
     {1.0, 2.0} = vector3:to_vector2(V),
