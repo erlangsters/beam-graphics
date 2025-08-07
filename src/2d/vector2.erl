@@ -76,10 +76,11 @@ Beware that a well-formed 2D vector always contains floats, not integers.
 """.
 
 -export([
-    zero/0
+    x/1, y/1
 ]).
 -export([
-    x/1, y/1
+    zero/0,
+    is_zero/1
 ]).
 -export([
     length/1,
@@ -141,21 +142,6 @@ Beware that a well-formed 2D vector always contains floats, not integers.
 ]}).
 
 -doc """
-The zero 2D vector.
-
-It constructs a zero 2D vector (both components set to 0.0).
-
-```erlang
-{0.0, 0.0} = vector2:zero().
-```
-
-Note that the `?VECTOR2_ZERO` macro can be used instead.
-""".
--spec zero() -> graphics:vector2().
-zero() ->
-    {0.0, 0.0}.
-
--doc """
 The X component of the 2D vector.
 
 It returns the X component of the 2D vector.
@@ -172,6 +158,36 @@ It returns the Y component of the 2D vector.
 -spec y(graphics:vector2()) -> float().
 y({_, Y}) ->
     Y.
+
+-doc """
+The zero 2D vector.
+
+It constructs a zero 2D vector (both components set to 0.0).
+
+```erlang
+{0.0, 0.0} = vector2:zero().
+```
+
+Note that the `?VECTOR2_ZERO` macro can be used instead.
+""".
+-spec zero() -> graphics:vector2().
+zero() ->
+    {0.0, 0.0}.
+
+-doc """
+To be written.
+""".
+-spec is_zero(graphics:vector2()) -> boolean().
+is_zero({+0.0, +0.0}) ->
+    true;
+is_zero({-0.0, -0.0}) ->
+    true;
+is_zero({+0.0, -0.0}) ->
+    true;
+is_zero({-0.0, +0.0}) ->
+    true;
+is_zero(_Vector) ->
+    false.
 
 -doc """
 Compute the length of a 2D vector.

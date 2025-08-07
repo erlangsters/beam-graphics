@@ -24,6 +24,21 @@ vector2_zero_test() ->
 
     ok.
 
+vector2_is_zero_test() ->
+    true = vector2:is_zero(vector2:zero()),
+    true = vector2:is_zero(?VECTOR2_ZERO),
+
+    false = vector2:is_zero({1.0, 0.0}),
+    false = vector2:is_zero({0.0, 1.0}),
+    false = vector2:is_zero({1.0, 1.0}),
+
+    true = vector2:is_zero({+0.0, +0.0}),
+    true = vector2:is_zero({-0.0, -0.0}),
+    true = vector2:is_zero({+0.0, -0.0}),
+    true = vector2:is_zero({-0.0, +0.0}),
+
+    ok.
+
 vector2_length_test() ->
     V = {3.0, 4.0},
     5.0 = vector2:length(V),

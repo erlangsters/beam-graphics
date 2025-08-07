@@ -25,6 +25,26 @@ vector3_zero_test() ->
 
     ok.
 
+vector3_is_zero_test() ->
+    true = vector3:is_zero(vector3:zero()),
+    true = vector3:is_zero(?VECTOR3_ZERO),
+
+    false = vector3:is_zero({1.0, 0.0, 0.0}),
+    false = vector3:is_zero({0.0, 1.0, 0.0}),
+    false = vector3:is_zero({0.0, 0.0, 1.0}),
+    false = vector3:is_zero({1.0, 1.0, 1.0}),
+
+    true = vector3:is_zero({+0.0, +0.0, +0.0}),
+    true = vector3:is_zero({-0.0, -0.0, -0.0}),
+    true = vector3:is_zero({+0.0, -0.0, +0.0}),
+    true = vector3:is_zero({-0.0, +0.0, -0.0}),
+    true = vector3:is_zero({+0.0, +0.0, -0.0}),
+    true = vector3:is_zero({-0.0, -0.0, +0.0}),
+    true = vector3:is_zero({+0.0, -0.0, -0.0}),
+    true = vector3:is_zero({-0.0, +0.0, +0.0}),
+
+    ok.
+
 vector3_length_test() ->
     V = {3.0, 4.0, 5.0},
     7.0710678118654755 = vector3:length(V),

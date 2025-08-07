@@ -79,10 +79,11 @@ Beware that a well-formed 3D vector always contains floats, not integers.
 """.
 
 -export([
-    zero/0
+    x/1, y/1, z/1
 ]).
 -export([
-    x/1, y/1, z/1
+    zero/0,
+    is_zero/1
 ]).
 -export([
     length/1,
@@ -141,15 +142,6 @@ Beware that a well-formed 3D vector always contains floats, not integers.
 ]}).
 
 -doc """
-A zero 3D vector.
-
-It constructs a zero 3D vector.
-""".
--spec zero() -> graphics:vector3().
-zero() ->
-    {0.0, 0.0, 0.0}.
-
--doc """
 The X component of the 3D vector.
 
 It returns the X component of the 3D vector.
@@ -175,6 +167,38 @@ It returns the Z component of the 3D vector.
 -spec z(graphics:vector3()) -> float().
 z({_, _, Z}) ->
     Z.
+
+-doc """
+A zero 3D vector.
+
+It constructs a zero 3D vector.
+""".
+-spec zero() -> graphics:vector3().
+zero() ->
+    {0.0, 0.0, 0.0}.
+
+-doc """
+To be written.
+""".
+-spec is_zero(graphics:vector3()) -> boolean().
+is_zero({+0.0, +0.0, +0.0}) ->
+    true;
+is_zero({+0.0, +0.0, -0.0}) ->
+    true;
+is_zero({+0.0, -0.0, +0.0}) ->
+    true;
+is_zero({+0.0, -0.0, -0.0}) ->
+    true;
+is_zero({-0.0, +0.0, +0.0}) ->
+    true;
+is_zero({-0.0, +0.0, -0.0}) ->
+    true;
+is_zero({-0.0, -0.0, +0.0}) ->
+    true;
+is_zero({-0.0, -0.0, -0.0}) ->
+    true;
+is_zero(_Vector) ->
+    false.
 
 -doc """
 Compute the length of a 3D vector.
