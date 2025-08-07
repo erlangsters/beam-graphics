@@ -135,6 +135,11 @@ vector2_divide_test() ->
 
     ok.
 
+vector2_negate_test() ->
+    % XXX
+
+    ok.
+
 vector2_is_equal_to_test() ->
     % XXX
 

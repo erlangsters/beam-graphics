@@ -117,6 +117,9 @@ Beware that a well-formed 2D vector always contains floats, not integers.
     divide/2
 ]).
 -export([
+    negate/1
+]).
+-export([
     is_equal_to/2, is_equal_to/3
 ]).
 -export([
@@ -365,6 +368,13 @@ To be written.
 """.
 -spec divide(graphics:vector2(), float()) -> graphics:vector2().
 divide({_X, _Y}, _Divider) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec negate(graphics:vector2()) -> graphics:vector2().
+negate({_X, _Y}) ->
     ok.
 
 -doc """

@@ -117,6 +117,9 @@ Beware that a well-formed 3D vector always contains floats, not integers.
     divide/2
 ]).
 -export([
+    negate/1
+]).
+-export([
     is_equal_to/2, is_equal_to/3
 ]).
 -export([
@@ -373,6 +376,13 @@ To be written.
 """.
 -spec divide(graphics:vector3(), float()) -> graphics:vector3().
 divide({_X, _Y, _Z}, _Divider) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec negate(graphics:vector3()) -> graphics:vector3().
+negate({_X, _Y, _Z}) ->
     ok.
 
 -doc """
