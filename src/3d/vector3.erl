@@ -93,6 +93,10 @@ Beware that a well-formed 3D vector always contains floats, not integers.
     cross_product/2
 ]).
 -export([
+    distance/2,
+    direction/2
+]).
+-export([
     add/2,
     subtract/2,
     multiply/2
@@ -214,6 +218,20 @@ result of the products of the other corresponding components.
 .
 cross_product({X1, Y1, Z1}, {X2, Y2, Z2}) ->
     {Y1*Z2 - Z1*Y2, Z1*X2 - X1*Z2, X1*Y2 - Y1*X2}.
+
+-doc """
+To be written.
+""".
+-spec distance(graphics:vector3(), graphics:vector3()) -> float().
+distance(_V1, _V2) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec direction(graphics:vector3(), graphics:vector3()) -> graphics:vector3().
+direction(_V1, _V2) ->
+    ok.
 
 -doc """
 Add a 3D vector to another 3D vector.

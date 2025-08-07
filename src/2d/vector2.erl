@@ -90,6 +90,10 @@ Beware that a well-formed 2D vector always contains floats, not integers.
     cross_product/2
 ]).
 -export([
+    distance/2,
+    direction/2
+]).
+-export([
     add/2,
     subtract/2,
     multiply/2
@@ -206,6 +210,20 @@ augmenting the 2D vectors to 3D vectors with a Z component set to 0.0.
 -spec cross_product(graphics:vector2(), graphics:vector2()) -> float().
 cross_product({X1, Y1}, {X2, Y2}) ->
     X1*Y2 - Y1*X2.
+
+-doc """
+To be written.
+""".
+-spec distance(graphics:vector2(), graphics:vector2()) -> float().
+distance(_V1, _V2) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec direction(graphics:vector2(), graphics:vector2()) -> graphics:vector2().
+direction(_V1, _V2) ->
+    ok.
 
 -doc """
 Add a 2D vector to another 2D vector.

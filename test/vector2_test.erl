@@ -50,6 +50,16 @@ vector2_cross_product_test() ->
 
     ok.
 
+vector2_distance_test() ->
+    % XXX
+
+    ok.
+
+vector2_direction_test() ->
+    % XXX
+
+    ok.
+
 vector2_add_test() ->
     V1 = {1.0, 2.0},
     V2 = {3.0, 4.0},
