@@ -220,6 +220,16 @@ matrix3_determinant_test() ->
 
     ok.
 
+matrix3_is_orthogonal_test() ->
+    % XXX
+
+    ok.
+
+matrix3_is_symmetric_test() ->
+    % XXX
+
+    ok.
+
 matrix3_add_test() ->
     % XXX
 

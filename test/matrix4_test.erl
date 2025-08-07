@@ -228,6 +228,16 @@ matrix4_determinant_test() ->
     % Purpose: Ensure floating-point stability (use abs(Result - Expected) < EPSILON).
     ok.
 
+matrix4_is_orthogonal_test() ->
+    % XXX
+
+    ok.
+
+matrix4_is_symmetric_test() ->
+    % XXX
+
+    ok.
+
 matrix4_add_test() ->
     % XXX
 

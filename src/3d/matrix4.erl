@@ -103,6 +103,10 @@ The common mathematical operations are also implemented.
     determinant/1
 ]).
 -export([
+    is_orthogonal/1,
+    is_symmetric/1
+]).
+-export([
     add/2,
     subtract/2,
     multiply/2,
@@ -318,6 +322,24 @@ To be written.
 """.
 -spec determinant(graphics:matrix4()) -> float().
 determinant(_Matrix) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec is_orthogonal(graphics:matrix4()) -> boolean().
+is_orthogonal(_Matrix) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec is_symmetric(graphics:matrix4()) -> boolean().
+is_symmetric(_Matrix) ->
     ok.
 
 -doc """

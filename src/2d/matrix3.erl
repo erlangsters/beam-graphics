@@ -105,6 +105,10 @@ The common mathematical operations are also implemented.
     determinant/1
 ]).
 -export([
+    is_orthogonal/1,
+    is_symmetric/1
+]).
+-export([
     add/2,
     subtract/2,
     multiply/2,
@@ -328,6 +332,24 @@ determinant(Matrix) ->
     element(Matrix, 1, 1) * (element(Matrix, 2, 2) * element(Matrix, 3, 3) - element(Matrix, 2, 3) * element(Matrix, 3, 2)) -
     element(Matrix, 1, 2) * (element(Matrix, 2, 1) * element(Matrix, 3, 3) - element(Matrix, 2, 3) * element(Matrix, 3, 1)) +
     element(Matrix, 1, 3) * (element(Matrix, 2, 1) * element(Matrix, 3, 2) - element(Matrix, 2, 2) * element(Matrix, 3, 1)).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec is_orthogonal(graphics:matrix3()) -> boolean().
+is_orthogonal(_Matrix) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec is_symmetric(graphics:matrix3()) -> boolean().
+is_symmetric(_Matrix) ->
+    ok.
 
 -doc """
 To be written.
