@@ -60,6 +60,21 @@ vector2_direction_test() ->
 
     ok.
 
+vector2_project_test() ->
+    % XXX
+
+    ok.
+
+vector2_rotate_test() ->
+    % XXX
+
+    ok.
+
+vector2_reflect_test() ->
+    % XXX
+
+    ok.
+
 vector2_add_test() ->
     V1 = {1.0, 2.0},
     V2 = {3.0, 4.0},

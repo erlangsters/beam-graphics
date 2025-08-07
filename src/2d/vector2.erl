@@ -94,6 +94,11 @@ Beware that a well-formed 2D vector always contains floats, not integers.
     direction/2
 ]).
 -export([
+    project/2,
+    rotate/2,
+    reflect/2
+]).
+-export([
     add/2,
     subtract/2,
     multiply/2
@@ -223,6 +228,27 @@ To be written.
 """.
 -spec direction(graphics:vector2(), graphics:vector2()) -> graphics:vector2().
 direction(_V1, _V2) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec project(graphics:vector2(), graphics:vector2()) -> graphics:vector2().
+project(_Vector, _Onto) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec rotate(graphics:vector2(), graphics:angle()) -> graphics:vector2().
+rotate(_Vector, _Angle) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec reflect(graphics:vector2(), graphics:vector2()) -> graphics:vector2().
+reflect(_Vector, _Axis) ->
     ok.
 
 -doc """
