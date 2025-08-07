@@ -22,6 +22,10 @@ To be written.
     transform_point/2,
     transform_direction/2
 ]).
+-export([
+    transform_vertex/2,
+    transform_box/2
+]).
 
 -doc """
 To be written.
@@ -89,3 +93,23 @@ transform_direction({M00, M10, _, M01, M11, _, _, _, _}, {Dx, Dy}) ->
         M00 * Dx + M01 * Dy,
         M10 * Dx + M11 * Dy
     }.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec transform_vertex(graphics:matrix3(), graphics:vertex2()) ->
+    graphics:vertex2().
+transform_vertex(_Matrix, _Vertex) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec transform_box(graphics:matrix3(), graphics:box2()) ->
+    graphics:box2().
+transform_box(_Matrix, _Box) ->
+    ok.

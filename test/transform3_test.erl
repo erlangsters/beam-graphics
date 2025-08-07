@@ -25,3 +25,9 @@ transform3_transform_point_test() ->
 
 transform3_transform_direction_test() ->
     ok.
+
+transform3_transform_vertex_test() ->
+    ok.
+
+transform3_transform_box_test() ->
+    ok.
