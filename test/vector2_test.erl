@@ -120,3 +120,13 @@ vector2_from_angle_test() ->
     % XXX
 
     ok.
+
+vector2_lerp_test() ->
+    % XXX
+
+    ok.
+
+vector2_smooth_lerp_test() ->
+    % XXX
+
+    ok.

@@ -109,6 +109,10 @@ Beware that a well-formed 3D vector always contains floats, not integers.
     to_angle/2,
     from_angle/2
 ]).
+-export([
+    lerp/3,
+    smooth_lerp/3
+]).
 
 -compile({inline, [
     zero/0,
@@ -342,3 +346,21 @@ To be written.
 -spec from_angle(graphics:angle(), graphics:vector3()) -> graphics:vector3().
 from_angle(_Angle, _Axis) ->
     ok.
+
+-doc """
+To be written.
+""".
+-spec lerp(graphics:vector3(), graphics:vector3(), float()) -> graphics:vector3().
+lerp({X1, Y1, Z1}, {X2, Y2, Z2}, T) ->
+    {
+        X1 + T * (X2 - X1),
+        Y1 + T * (Y2 - Y1),
+        Z1 + T * (Z2 - Z1)
+    }.
+
+-doc """
+To be written.
+""".
+-spec smooth_lerp(graphics:vector3(), graphics:vector3(), float()) -> graphics:vector3().
+smooth_lerp(V1, V2, T) ->
+    smooth_lerp(V1, V2, T * T * (3.0 - 2.0 * T)).

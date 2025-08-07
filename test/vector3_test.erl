@@ -123,3 +123,13 @@ vector3_from_angle_test() ->
     % XXX
 
     ok.
+
+vector3_lerp_test() ->
+    % XXX
+
+    ok.
+
+vector3_smooth_lerp_test() ->
+    % XXX
+
+    ok.
