@@ -76,6 +76,11 @@ vector3_reflect_test() ->
 
     ok.
 
+vector3_clamp_length_test() ->
+    % XXX
+
+    ok.
+
 vector3_add_test() ->
     V1 = {1.0, 2.0, 3.0},
     V2 = {4.0, 5.0, 6.0},

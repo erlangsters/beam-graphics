@@ -102,6 +102,9 @@ Beware that a well-formed 3D vector always contains floats, not integers.
     reflect/2
 ]).
 -export([
+    clamp_length/3
+]).
+-export([
     add/2,
     subtract/2,
     multiply/2
@@ -258,6 +261,13 @@ To be written.
 """.
 -spec reflect(graphics:vector3(), graphics:vector3()) -> graphics:vector3().
 reflect(_Vector, _Axis) ->
+    ok.
+
+-doc """
+To be written.
+""".
+-spec clamp_length(graphics:vector3(), float(), float()) -> graphics:vector3().
+clamp_length(_Vector, _Min, _Max) ->
     ok.
 
 -doc """
