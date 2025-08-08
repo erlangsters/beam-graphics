@@ -28,7 +28,6 @@ To be written.
     from_window/3
 ]).
 -export([
-    with_size/2,
     size/1,
     view_matrix/1,
     set_view_matrix/2,
@@ -138,16 +137,6 @@ To be written.
 -spec from_window(egl:display(), egl:window(), size()) -> worker:start_ret().
 from_window(Display, Window, {Width, Height}) when Width > 0 andalso Height > 0 ->
     {ok, WorkerId} = worker:spawn(link, ?MODULE, [Display, Window, Width, Height]),
-    {ok, {WorkerId, {Width, Height}}}.
-
--doc """
-To be written.
-
-To be written.
-""".
--spec with_size(egl:display(), size()) -> worker:start_ret().
-with_size(Display, {Width, Height}) when Width > 0 andalso Height > 0 ->
-    {ok, WorkerId} = worker:spawn(link, ?MODULE, [Display, no_window, Width, Height]),
     {ok, {WorkerId, {Width, Height}}}.
 
 -doc """
