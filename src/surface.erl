@@ -45,6 +45,9 @@ To be written.
     display/1
 ]).
 -export([
+    image/1
+]).
+-export([
     gl_context/1,
     gl_commands/2
 ]).
@@ -418,6 +421,17 @@ To be written.
 
 To be written.
 """.
+-spec image(object()) -> {ok, texture:image()}.
+image({WorkerId, {Width, Height} = Size}) ->
+    {reply, Data} = worker:request(WorkerId, {raw_pixels, Size}),
+    Pixels = data_to_pixels(Data),
+    {ok, {Width, Height, Pixels}}.
+
+-doc """
+To be written.
+
+To be written.
+""".
 -spec gl_context(object()) -> egl:context().
 gl_context({WorkerId, _}) ->
     {reply, Context} = worker:request(WorkerId, gl_context),
@@ -676,6 +690,16 @@ handle_request(
     ok = egl:swap_buffers(Display, Surface),
     {reply, ok, State};
 
+handle_request({raw_pixels, {Width, Height}}, _From, State) ->
+    ok = gl:read_buffer(front),
+    {ok, Data} = gl:read_pixels(
+        0, 0,
+        Width, Height,
+        rgba, unsigned_byte,
+        Width * Height * 4
+    ),
+    {reply, Data, State};
+
 handle_request(gl_context, _From, #state{context = Context} = State) ->
     {reply, Context, State};
 
@@ -731,3 +755,19 @@ default_projection_matrix(Width, Height) ->
     view3:orthographic(
         0.0, erlang:float(Width), 0.0, erlang:float(Height), -9999.0, 9999.0
     ).
+
+data_to_pixels(Data) ->
+    data_to_pixels(Data, []).
+
+data_to_pixels(<<>>, Pixels) ->
+    lists:reverse(Pixels);
+data_to_pixels(Data, Pixels) ->
+    <<
+        R:8/unsigned-integer,
+        G:8/unsigned-integer,
+        B:8/unsigned-integer,
+        A:8/unsigned-integer,
+        DataRest/binary
+    >> = Data,
+    Pixel = {R, G, B, A},
+    data_to_pixels(DataRest, [Pixel | Pixels]).
