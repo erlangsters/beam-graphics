@@ -24,6 +24,10 @@ To be written.
     line/3,
     triangle/4
 ]).
+-export([
+    cube/3,
+    cube_wires/3
+]).
 
 -compile({inline, [
     with_mesh/3, with_mesh/4,
@@ -161,3 +165,143 @@ triangle(A, B, C, Color) ->
         ?VERTEX3(C, Color)
     ]),
     shape3:with_mesh(Mesh, triangles, 3).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec cube(
+    graphics:vector3(),
+    graphics:vector3(),
+    graphics:color()
+) ->
+    graphics:shape3()
+.
+cube({X, Y, Z}, {Width, Height, Length}, Color) ->
+    Vertices = [
+        % Front face
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom Left
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom Right
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top Left
+
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top Right
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top Left
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom Right
+
+        % Back face
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Bottom Left
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top Left
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Bottom Right
+
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top Right
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Bottom Right
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top Left
+
+        % Top face
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top Left
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Bottom Left
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Bottom Right
+
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top Right
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top Left
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Bottom Right
+
+        % Bottom face
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Top Left
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom Right
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom Left
+
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Top Right
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom Right
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Top Left
+
+        % Right face
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Bottom Right
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top Right
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top Left
+
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom Left
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Bottom Right
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top Left
+
+        % Left face
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Bottom Right
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top Left
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top Right
+
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom Left
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top Left
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color) % Bottom Right
+    ],
+    {ok, Mesh} = mesh3:with_vertices(Vertices),
+    VertexCount = length(Vertices),
+    shape3:with_mesh(Mesh, triangles, VertexCount).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec cube_wires(
+    graphics:vector3(),
+    graphics:vector3(),
+    graphics:color()
+) ->
+    graphics:shape3()
+.
+cube_wires({X, Y, Z}, {Width, Height, Length}, Color) ->
+
+    Vertices = [
+        % Front face
+        %------------------------------------------------------------------
+        % Bottom line
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom left
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom right
+        % Left line
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom right
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top right
+        % Top line
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top right
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top left
+        % Right line
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top left
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Bottom left
+
+        % Back face
+        %------------------------------------------------------------------
+        % Bottom line
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Bottom left
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Bottom right
+        % Left line
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Bottom right
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top right
+        % Top line
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top right
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top left
+        % Right line
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top left
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Bottom left
+
+        % Top face
+        %------------------------------------------------------------------
+        % Left line
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top left front
+        ?VERTEX3({X - Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top left back
+        % Right line
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z + Length/2.0}, Color), % Top right front
+        ?VERTEX3({X + Width/2.0, Y + Height/2.0, Z - Length/2.0}, Color), % Top right back
+
+        % Bottom face
+        %------------------------------------------------------------------
+        % Left line
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Top left front
+        ?VERTEX3({X - Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color), % Top left back
+        % Right line
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z + Length/2.0}, Color), % Top right front
+        ?VERTEX3({X + Width/2.0, Y - Height/2.0, Z - Length/2.0}, Color)  % Top right back
+    ],
+
+    {ok, Mesh} = mesh3:with_vertices(Vertices),
+    VertexCount = length(Vertices),
+    shape3:with_mesh(Mesh, lines, VertexCount).
