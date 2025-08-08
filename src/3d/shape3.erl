@@ -25,6 +25,9 @@ To be written.
     triangle/4
 ]).
 -export([
+    triangle_wires/4
+]).
+-export([
     cube/3,
     cube_wires/3
 ]).
@@ -169,6 +172,27 @@ triangle(A, B, C, Color) ->
         ?VERTEX3(C, Color)
     ]),
     shape3:with_mesh(Mesh, triangles, 3).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec triangle_wires(
+    graphics:vector3(),
+    graphics:vector3(),
+    graphics:vector3(),
+    graphics:color()
+) ->
+    graphics:shape3()
+.
+triangle_wires(A, B, C, Color) ->
+    {ok, Mesh} = mesh3:with_vertices([
+        ?VERTEX3(A, Color),
+        ?VERTEX3(B, Color),
+        ?VERTEX3(C, Color)
+    ]),
+    shape3:with_mesh(Mesh, line_loop, 3).
 
 -doc """
 To be written.
