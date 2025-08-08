@@ -28,7 +28,9 @@ To be written.
     from_window/3
 ]).
 -export([
+    with_size/2,
     size/1,
+    resize/2,
     view_matrix/1,
     set_view_matrix/2,
     projection_matrix/1,
@@ -55,6 +57,7 @@ To be written.
     size/1
 ]}).
 -compile({inline, [
+    choose_egl_config/2,
     default_view_matrix/0,
     default_projection_matrix/2
 ]}).
@@ -105,7 +108,7 @@ void main() {
 -record(state, {
     display :: egl:display(),
     context :: egl:context(),
-    surface :: egl:surface(),
+    surface :: {pbuffer | window, egl:surface()},
     program :: gl:program(),
     % Location of the view and projection matrices in the shader program.
     model_location :: gl:location(),
@@ -144,9 +147,34 @@ To be written.
 
 To be written.
 """.
+-spec with_size(egl:display(), size()) -> worker:start_ret().
+with_size(Display, {Width, Height}) when Width > 0 andalso Height > 0 ->
+    {ok, WorkerId} = worker:spawn(link, ?MODULE, [Display, no_window, Width, Height]),
+    {ok, {WorkerId, {Width, Height}}}.
+
+-doc """
+To be written.
+
+To be written.
+""".
 -spec size(object()) -> size().
 size({_, Size}) ->
     Size.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec resize(object(), size()) -> {ok, object()} | no_pbuffer.
+resize({WorkerId, _}, Size) ->
+    {reply, Reply} = worker:request(WorkerId, {resize, Size}),
+    case Reply of
+        no_pbuffer ->
+            no_pbuffer;
+        ok ->
+            {ok, {WorkerId, Size}}
+    end.
 
 -doc """
 To be written.
@@ -406,15 +434,22 @@ gl_commands({WorkerId, _}, Commands) ->
     Reply.
 
 initialize([Display, Window, Width, Height]) ->
+    SurfaceType = case Window of
+        no_window ->
+            pbuffer;
+        _ ->
+            window
+    end,
+
     ShareContext = graphics_context:inner_context(),
     egl_helper:print_context(Display, ShareContext),
 
-    ConfigAttribs = [
-        {surface_type, [window_bit]},
-        {renderable_type, [opengl_bit]}
-    ],
-    {ok, Configs} = egl:choose_config(Display, ConfigAttribs),
-    Config = hd(Configs),
+    Config = case SurfaceType of
+        pbuffer ->
+            choose_egl_config(Display, pbuffer_bit);
+        window ->
+            choose_egl_config(Display, window_bit)
+    end,
 
     ContextAttribs = [
         {context_major_version, 4},
@@ -424,7 +459,13 @@ initialize([Display, Window, Width, Height]) ->
     {ok, Context} =
         egl:create_context(Display, Config, ShareContext, ContextAttribs),
 
-    {ok, Surface} = egl:create_window_surface(Display, Config, Window, []),
+    {ok, Surface} = case SurfaceType of
+        pbuffer ->
+            SurfaceAttribs = [{width, Width}, {height, Height}],
+            egl:create_pbuffer_surface(Display, Config, SurfaceAttribs);
+        window ->
+            egl:create_window_surface(Display, Config, Window, [])
+    end,
 
     ok = egl:make_current(Display, Surface, Surface, Context),
 
@@ -443,17 +484,53 @@ initialize([Display, Window, Width, Height]) ->
     ok = gl:uniform(i, TextureLocation, {0}),
 
     gl:enable(depth_test),
+    % gl:enable(cull_face),
     gl:front_face(ccw),
+    % gl:cull_face(back),
+    % gl:depth_func(less),
+    % gl:disable(blend),
 
     {continue, #state{
         display = Display,
         context = Context,
-        surface = Surface,
+        surface = {SurfaceType, Surface},
         program = Program,
         model_location = ModelLocation,
         view_location = ViewLocation,
         projection_location = ProjectionLocation
     }}.
+
+handle_request(
+    {resize, _Size},
+    _From,
+    #state{surface = {window, _}} = State
+) ->
+    % If the surface is backed by a window, the window controls its size. We
+    % cannot resize it.
+    {reply, no_pbuffer, State};
+
+handle_request(
+    {resize, {Width, Height}},
+    _From,
+    #state{
+        display = Display,
+        context = Context,
+        surface = {pbuffer, Surface}
+    } = State
+) ->
+    Config = choose_egl_config(Display, pbuffer_bit),
+
+    ok = egl:make_current(Display, no_surface, no_surface, Context),
+    ok = egl:destroy_surface(Display, Surface),
+
+    SurfaceAttribs = [{width, Width}, {height, Height}],
+    {ok, NewSurface} = egl:create_pbuffer_surface(Display, Config, SurfaceAttribs),
+
+    ok = egl:make_current(Display, NewSurface, NewSurface, Context),
+
+    {reply, ok, State#state{
+        surface = {pbuffer, NewSurface}
+    }};
 
 handle_request(viewport, _From, State) ->
     {ok, [X, Y, Width, Height]} = gl:get_integer(viewport, 4),
@@ -593,7 +670,7 @@ handle_request(
     _From,
     #state{
         display = Display,
-        surface = Surface
+        surface = {_, Surface}
     } = State
 ) ->
     ok = egl:swap_buffers(Display, Surface),
@@ -638,6 +715,14 @@ setup_program(Width, Height) ->
     ok = gl:viewport(0, 0, Width, Height),
 
     {Program, ModelLocation, ViewLocation, ProjectionLocation}.
+
+choose_egl_config(Display, SurfaceType) ->
+    ConfigAttribs = [
+        {surface_type, [SurfaceType]},
+        {renderable_type, [opengl_bit]}
+    ],
+    {ok, Configs} = egl:choose_config(Display, ConfigAttribs),
+    Config = hd(Configs).
 
 default_view_matrix() ->
     ?MATRIX4_IDENTITY.
