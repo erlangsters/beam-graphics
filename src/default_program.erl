@@ -65,18 +65,18 @@ make(Width, Height) ->
 
         % Set up default model matrix (no transformation).
         GlModelMatrix = matrix4:columns(?MATRIX4_IDENTITY),
-        gl:uniform_matrix(f, ModelLocation, 1, false, [GlModelMatrix]),
+        gl:uniform_matrix(f, ModelLocation, GlModelMatrix),
 
         % Set up default view matrix (no transformation).
         ViewMatrix = default_view_matrix(),
         GlViewMatrix = matrix4:columns(ViewMatrix),
-        gl:uniform_matrix(f, ViewLocation, 1, false, [GlViewMatrix]),
+        gl:uniform_matrix(f, ViewLocation, GlViewMatrix),
 
         % Set up default projection matrix (an orthographic projection).
         % XXX: What is a good value for the near and far planes?
         ProjectionMatrix = default_projection_matrix(Width, Height),
         GlProjectionMatrix = matrix4:columns(ProjectionMatrix),
-        gl:uniform_matrix(f, ProjectionLocation, 1, false, [GlProjectionMatrix]),
+        gl:uniform_matrix(f, ProjectionLocation, GlProjectionMatrix),
 
         % Set up default viewport.
         ok = gl:viewport(0, 0, Width, Height),

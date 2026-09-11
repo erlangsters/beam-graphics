@@ -114,9 +114,9 @@ void main() {
     surface :: {pbuffer | window, egl:surface()},
     program :: gl:program(),
     % Location of the view and projection matrices in the shader program.
-    model_location :: gl:location(),
-    view_location :: gl:location(),
-    projection_location :: gl:location()
+    model_location :: gl:int(),
+    view_location :: gl:int(),
+    projection_location :: gl:int()
 }).
 
 -type size() :: {
@@ -505,7 +505,7 @@ initialize([Display, Window, Width, Height]) ->
     ok = gl:active_texture(texture0),
 
     {ok, TextureLocation} = gl:get_uniform_location(Program, "uTexture"),
-    ok = gl:uniform(i, TextureLocation, {0}),
+    ok = gl:uniform(i, TextureLocation, 0),
 
     gl:enable(depth_test),
     % gl:enable(cull_face),
@@ -582,7 +582,7 @@ handle_request(
         view_location = Location
     } = State
 ) ->
-    ok = gl:uniform_matrix(f, Location, 1, false, [Matrix]),
+    ok = gl:uniform_matrix(f, Location, Matrix),
     {reply, ok, State};
 
 handle_request(
@@ -603,7 +603,7 @@ handle_request(
         projection_location = Location
     } = State
 ) ->
-    ok = gl:uniform_matrix(f, Location, 1, false, [Matrix]),
+    ok = gl:uniform_matrix(f, Location, Matrix),
     {reply, ok, State};
 
 handle_request(
@@ -661,15 +661,15 @@ handle_request(
             gl:enable_vertex_attrib_array(2)
     end,
 
-    ok = gl:uniform_matrix(f, ModelLocation, 1, false, [Matrix]),
+    ok = gl:uniform_matrix(f, ModelLocation, Matrix),
 
     % XXX: Location could be cached.
     {ok, UseTextureLocation} = gl:get_uniform_location(Program, "uUseTexture"),
     case Texture of
         no_texture ->
-            ok = gl:uniform(i, UseTextureLocation, {0});
+            ok = gl:uniform(i, UseTextureLocation, 0);
         _ ->
-            ok = gl:uniform(i, UseTextureLocation, {1}),
+            ok = gl:uniform(i, UseTextureLocation, 1),
 
             GlTexture = texture:gl_object(Texture),
             ok = gl:bind_texture(texture_2d, GlTexture)
@@ -681,11 +681,11 @@ handle_request(
         no_texture ->
             ok;
         _ ->
-            ok = gl:bind_texture(texture_2d, 0)
+            ok = gl:bind_texture(texture_2d, none)
     end,
 
-    ok = gl:bind_vertex_array(0),
-    ok = gl:delete_vertex_arrays(1, [VertexArray]),
+    ok = gl:bind_vertex_array(none),
+    ok = gl:delete_vertex_arrays([VertexArray]),
 
     {reply, ok, State};
 
@@ -732,18 +732,18 @@ setup_program(Width, Height) ->
 
     % Set up default model matrix (no transformation).
     GlModelMatrix = matrix4:columns(?MATRIX4_IDENTITY),
-    gl:uniform_matrix(f, ModelLocation, 1, false, [GlModelMatrix]),
+    gl:uniform_matrix(f, ModelLocation, GlModelMatrix),
 
     % Set up default view matrix (no transformation).
     ViewMatrix = default_view_matrix(),
     GlViewMatrix = matrix4:columns(ViewMatrix),
-    gl:uniform_matrix(f, ViewLocation, 1, false, [GlViewMatrix]),
+    gl:uniform_matrix(f, ViewLocation, GlViewMatrix),
 
     % Set up default projection matrix (an orthographic projection).
     % XXX: What is a good value for the near and far planes?
     ProjectionMatrix = default_projection_matrix(Width, Height),
     GlProjectionMatrix = matrix4:columns(ProjectionMatrix),
-    gl:uniform_matrix(f, ProjectionLocation, 1, false, [GlProjectionMatrix]),
+    gl:uniform_matrix(f, ProjectionLocation, GlProjectionMatrix),
 
     % Set up default viewport.
     ok = gl:viewport(0, 0, Width, Height),

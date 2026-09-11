@@ -38,7 +38,7 @@ graphics_context_test() ->
 
     Self = self(),
     ReleaseFun = fun({buffer, Buffer} = ResourceId) ->
-        ok = gl:delete_buffers(1, [Buffer]),
+        ok = gl:delete_buffers([Buffer]),
         Self ! {released_resource, ResourceId},
         ok
     end,
@@ -89,7 +89,7 @@ graphics_context_resource_test() ->
     % 0 = maps:size(Resources1),
 
     % ReleaseFun = fun({buffer, Buffer}) ->
-    %     ok = gl:delete_buffers(1, [Buffer]),
+    %     ok = gl:delete_buffers([Buffer]),
     %     ok
     % end,
     % AcquireFun = fun() ->
@@ -131,7 +131,7 @@ graphics_context_monitor_test() ->
     % process_flag(trap_exit, true),
 
     % ReleaseFun = fun({buffer, Buffer}) ->
-    %     ok = gl:delete_buffers(1, [Buffer]),
+    %     ok = gl:delete_buffers([Buffer]),
     %     ok
     % end,
     % AcquireFun = fun() ->
@@ -176,7 +176,7 @@ graphics_context_ownership_test() ->
     % process_flag(trap_exit, true),
 
     % ReleaseFun = fun({buffer, Buffer}) ->
-    %     ok = gl:delete_buffers(1, [Buffer]),
+    %     ok = gl:delete_buffers([Buffer]),
     %     ok
     % end,
     % AcquireFun = fun() ->

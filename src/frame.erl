@@ -73,9 +73,9 @@ To be written.
     ResourceId :: {frame, gl:framebuffer(), gl:texture()},
     Size :: size(),
     Program :: {program:objects(), {
-        ModelLocation :: gl:uniform_location(),
-        ViewLocation :: gl:uniform_location(),
-        ProjectionLocation :: gl:uniform_location()
+        ModelLocation :: gl:int(),
+        ViewLocation :: gl:int(),
+        ProjectionLocation :: gl:int()
     }},
     Viewport :: viewport()
 }.
@@ -165,7 +165,7 @@ set_view_matrix({_, _, {Program, Locations}, _}, Matrix) ->
     GlMatrix = matrix4:columns(Matrix),
     graphics_context:execute_commands(fun() ->
         ok = gl:use_program(GlProgram),
-        ok = gl:uniform_matrix(f, ViewLocation, 1, false, [GlMatrix]),
+        ok = gl:uniform_matrix(f, ViewLocation, GlMatrix),
         ok
     end).
 
@@ -197,7 +197,7 @@ set_projection_matrix({_, _, {Program, Locations}, _}, Matrix) ->
     GlMatrix = matrix4:columns(Matrix),
     graphics_context:execute_commands(fun() ->
         ok = gl:use_program(GlProgram),
-        ok = gl:uniform_matrix(f, ProjectionLocation, 1, false, [GlMatrix]),
+        ok = gl:uniform_matrix(f, ProjectionLocation, GlMatrix),
         ok
     end).
 
@@ -457,15 +457,15 @@ frame_draw(
                 gl:enable_vertex_attrib_array(2)
         end,
 
-        ok = gl:uniform_matrix(f, ModelLocation, 1, false, [Matrix]),
+        ok = gl:uniform_matrix(f, ModelLocation, Matrix),
 
         % XXX: Location could be cached.
         {ok, UseTextureLocation} = gl:get_uniform_location(Program, "uUseTexture"),
         case Texture of
             no_texture ->
-                ok = gl:uniform(i, UseTextureLocation, {0});
+                ok = gl:uniform(i, UseTextureLocation, 0);
             _ ->
-                ok = gl:uniform(i, UseTextureLocation, {1}),
+                ok = gl:uniform(i, UseTextureLocation, 1),
 
                 GlTexture = texture:gl_object(Texture),
                 ok = gl:bind_texture(texture_2d, GlTexture)
@@ -477,11 +477,11 @@ frame_draw(
             no_texture ->
                 ok;
             _ ->
-                ok = gl:bind_texture(texture_2d, 0)
+                ok = gl:bind_texture(texture_2d, none)
         end,
 
-        ok = gl:bind_vertex_array(0),
-        ok = gl:delete_vertex_arrays(1, [VertexArray]),
+        ok = gl:bind_vertex_array(none),
+        ok = gl:delete_vertex_arrays([VertexArray]),
 
         ok
     end),
@@ -517,8 +517,8 @@ texture({{frame, _, Texture}, Size, _, _}) ->
 
 acquire_frame(Width, Height, InternalFormat) when Width > 0 andalso Height > 0 ->
     ReleaseFun = fun({frame, Framebuffer, Texture}) ->
-        ok = gl:bind_texture(texture_2d, 0),
-        ok = gl:delete_textures(1, [Texture]),
+        ok = gl:bind_texture(texture_2d, none),
+        ok = gl:delete_textures([Texture]),
         ok
     end,
     AcquireFun = fun() ->
@@ -546,10 +546,10 @@ acquire_frame(Width, Height, InternalFormat) when Width > 0 andalso Height > 0 -
         %     <<>>
         % ),
         
-        gl:tex_parameter(i, texture_2d, texture_min_filter, ?GL_LINEAR),
-        gl:tex_parameter(i, texture_2d, texture_mag_filter, ?GL_LINEAR),
-        gl:tex_parameter(i, texture_2d, texture_wrap_s, ?GL_CLAMP_TO_EDGE),
-        gl:tex_parameter(i, texture_2d, texture_wrap_t, ?GL_CLAMP_TO_EDGE),
+        ok = gl:tex_min_filter(texture_2d, linear),
+        ok = gl:tex_mag_filter(texture_2d, linear),
+        ok = gl:tex_wrap_s(texture_2d, clamp_to_edge),
+        ok = gl:tex_wrap_t(texture_2d, clamp_to_edge),
 
         % glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
         % glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture, 0);

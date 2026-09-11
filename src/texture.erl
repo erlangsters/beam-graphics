@@ -419,7 +419,7 @@ set_image(
             rgba, unsigned_byte,
             Data
         ),
-        ok = gl:bind_texture(texture_2d, 0),
+        ok = gl:bind_texture(texture_2d, none),
         ok
     end),
     NewLocalPixels = case LocalPixels of
@@ -757,18 +757,10 @@ set_minification_filter(
     {{texture, GlTexture}, _, _, _, _, _, _} = Texture,
     Filter
 ) ->
-    Value = case Filter of
-        nearest -> ?GL_NEAREST;
-        linear -> ?GL_LINEAR;
-        nearest_mipmap_nearest -> ?GL_NEAREST_MIPMAP_NEAREST;
-        linear_mipmap_nearest -> ?GL_LINEAR_MIPMAP_NEAREST;
-        nearest_mipmap_linear -> ?GL_NEAREST_MIPMAP_LINEAR;
-        linear_mipmap_linear -> ?GL_LINEAR_MIPMAP_LINEAR
-    end,
     ok = graphics_context:execute_commands(fun() ->
         ok = gl:bind_texture(texture_2d, GlTexture),
-        ok = gl:tex_parameter(i, texture_2d, texture_min_filter, Value),
-        ok = gl:bind_texture(texture_2d, 0),
+        ok = gl:tex_min_filter(texture_2d, Filter),
+        ok = gl:bind_texture(texture_2d, none),
         ok
     end),
     {ok, erlang:setelement(4, Texture, Filter)}.
@@ -792,14 +784,10 @@ set_magnification_filter(
     {{texture, GlTexture}, _, _, _, _, _, _} = Texture,
     Filter
 ) ->
-    Value = case Filter of
-        nearest -> ?GL_NEAREST;
-        linear -> ?GL_LINEAR
-    end,
     ok = graphics_context:execute_commands(fun() ->
         ok = gl:bind_texture(texture_2d, GlTexture),
-        ok = gl:tex_parameter(i, texture_2d, texture_mag_filter, Value),
-        ok = gl:bind_texture(texture_2d, 0),
+        ok = gl:tex_mag_filter(texture_2d, Filter),
+        ok = gl:bind_texture(texture_2d, none),
         ok
     end),
     {ok, erlang:setelement(5, Texture, Filter)}.
@@ -827,21 +815,21 @@ set_wrap_mode(
     Axis,
     Mode
 ) ->
-    {Parameter, NewWrapMode} = case Axis of
+    NewWrapMode = case Axis of
         horizontal ->
-            {texture_wrap_s, {Mode, WrapModeY}};
+            {Mode, WrapModeY};
         vertical ->
-            {texture_wrap_t, {WrapModeX, Mode}}
-    end,
-    Value = case Mode of
-        repeat -> ?GL_REPEAT;
-        clamp_to_edge -> ?GL_CLAMP_TO_EDGE;
-        mirrored_repeat -> ?GL_MIRRORED_REPEAT
+            {WrapModeX, Mode}
     end,
     ok = graphics_context:execute_commands(fun() ->
         ok = gl:bind_texture(texture_2d, GlTexture),
-        ok = gl:tex_parameter(i, texture_2d, Parameter, Value),
-        ok = gl:bind_texture(texture_2d, 0),
+        case Axis of
+            horizontal ->
+                ok = gl:tex_wrap_s(texture_2d, Mode);
+            vertical ->
+                ok = gl:tex_wrap_t(texture_2d, Mode)
+        end,
+        ok = gl:bind_texture(texture_2d, none),
         ok
     end),
     {ok, erlang:setelement(6, Texture, NewWrapMode)}.
@@ -856,7 +844,7 @@ generate_mipmap({{texture, GlTexture}, _, _, _, _, _, _}) ->
     ok = graphics_context:execute_commands(fun() ->
         ok = gl:bind_texture(texture_2d, GlTexture),
         ok = gl:generate_mipmap(texture_2d),
-        ok = gl:bind_texture(texture_2d, 0),
+        ok = gl:bind_texture(texture_2d, none),
         ok
     end).
 
@@ -958,21 +946,21 @@ image_pixel(Width, _Height, LocalPixels, OffsetX, OffsetY) ->
 
 acquire_texture(Width, Height, Data, InternalFormat) when Width > 0 andalso Height > 0 ->
     ReleaseFun = fun({texture, Texture}) ->
-        ok = gl:bind_texture(texture_2d, 0),
-        ok = gl:delete_textures(1, [Texture]),
+        ok = gl:bind_texture(texture_2d, none),
+        ok = gl:delete_textures([Texture]),
         ok
     end,
     AcquireFun = fun() ->
         {ok, [Texture]} = gl:gen_textures(1),
         ok = gl:bind_texture(texture_2d, Texture),
 
-        gl:tex_parameter(i, texture_2d, texture_min_filter, ?GL_LINEAR),
-        gl:tex_parameter(i, texture_2d, texture_mag_filter, ?GL_LINEAR),
-        gl:tex_parameter(i, texture_2d, texture_wrap_s, ?GL_CLAMP_TO_EDGE),
-        gl:tex_parameter(i, texture_2d, texture_wrap_t, ?GL_CLAMP_TO_EDGE),
+        ok = gl:tex_min_filter(texture_2d, linear),
+        ok = gl:tex_mag_filter(texture_2d, linear),
+        ok = gl:tex_wrap_s(texture_2d, clamp_to_edge),
+        ok = gl:tex_wrap_t(texture_2d, clamp_to_edge),
 
-        gl:pixel_store(i, unpack_alignment, 1),
-        gl:pixel_store(i, pack_alignment, 1),
+        gl:pixel_store(unpack_alignment, 1),
+        gl:pixel_store(pack_alignment, 1),
 
         ok = gl:tex_image_2d(
             texture_2d, 0, InternalFormat,
@@ -999,7 +987,7 @@ texture_data(Texture, Width, Height) ->
             rgba, float,
             Size
         ),
-        ok = gl:bind_texture(texture_2d, 0),
+        ok = gl:bind_texture(texture_2d, none),
         Data
     end).
 
@@ -1015,6 +1003,6 @@ update_texture_data(Texture, Width, Height, Data, OffsetX, OffsetY) ->
         ),
         ok = gl:flush(),
 
-        ok = gl:bind_texture(texture_2d, 0),
+        ok = gl:bind_texture(texture_2d, none),
         ok
     end).

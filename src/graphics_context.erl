@@ -308,7 +308,7 @@ initialize([Display]) ->
     ok = gl:glad_load_gl(),
 
     io:format(user, "[debug] aaa~n", []),
-    no_error = gl:get_error(),
+    {ok, no_error} = gl:get_error(),
     io:format(user, "[debug] bbb~n", []),
 
     {ok, Version} = gl:get_string(version),

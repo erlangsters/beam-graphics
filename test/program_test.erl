@@ -77,10 +77,10 @@ program_test() ->
     Object = program:gl_object(Program),
     graphics_context:execute_commands(fun() ->
         % gl:use_program(Object),
-        {ok, [ActiveUniforms]} = gl:get_program(i, Object, active_uniforms, 1),
+        {ok, [ActiveUniforms]} = gl:get_program(Object, active_uniforms, 1),
         io:format(user, "Active uniforms: ~p~n", [ActiveUniforms]),
 
-        {ok, [ProgramBinaryLength]} = gl:get_program(i, Object, program_binary_length, 1),
+        {ok, [ProgramBinaryLength]} = gl:get_program(Object, program_binary_length, 1),
         io:format(user, "Binary length: ~p~n", [ProgramBinaryLength]),
         ok
     end),

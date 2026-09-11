@@ -175,7 +175,7 @@ acquire_program_with_binary(Binary) ->
     AcquireFun = fun() ->
         {ok, Program} = gl:create_program(),
         ok = gl:program_binary(Program, binary_format, Binary),
-        case gl:get_program(i, Program, link_status, 1) of
+        case gl:get_program(Program, link_status, 1) of
             {ok, [?GL_TRUE]} ->
                 {ok, {program, Program}, ReleaseFun};
             {ok, [?GL_FALSE]} ->
@@ -191,11 +191,11 @@ compile_shader(ShaderType, ShaderSrc) ->
     {ok, Shader} = gl:create_shader(ShaderType),
     gl:shader_source(Shader, [ShaderSrc]),
     gl:compile_shader(Shader),
-    case gl:get_shader(i, Shader, compile_status, 1) of
+    case gl:get_shader(Shader, compile_status, 1) of
         {ok, [?GL_TRUE]} ->
             {ok, Shader};
         {ok, [?GL_FALSE]} ->
-            {ok, [InfoLogLength]} = gl:get_shader(i, Shader, info_log_length, 1),
+            {ok, [InfoLogLength]} = gl:get_shader(Shader, info_log_length, 1),
             {ok, InfoLogs} = gl:get_shader_info_log(Shader, InfoLogLength),
             {error, InfoLogs}
     end.
@@ -211,11 +211,11 @@ link_program(VertexShader, FragmentShader) ->
     gl:attach_shader(Program, VertexShader),
     gl:attach_shader(Program, FragmentShader),
     gl:link_program(Program),
-    case gl:get_program(i, Program, link_status, 1) of
+    case gl:get_program(Program, link_status, 1) of
         {ok, [?GL_TRUE]} ->
             {ok, Program};
         {ok, [?GL_FALSE]} ->
-            {ok, [InfoLogLength]} = gl:get_program(i, Program, info_log_length, 1),
+            {ok, [InfoLogLength]} = gl:get_program(Program, info_log_length, 1),
             {ok, InfoLogs} = gl:get_program_info_log(Program, InfoLogLength),
             {error, InfoLogs}
     end.
@@ -223,7 +223,7 @@ link_program(VertexShader, FragmentShader) ->
 program_binary(Program) ->
     graphics_context:execute_commands(fun() ->
         % XXX: Verify implementation.
-        {ok, [BinaryLength]} = gl:get_program(i, Program, program_binary_length, 1),
+        {ok, [BinaryLength]} = gl:get_program(Program, program_binary_length, 1),
         {ok, Binary} = gl:get_program_binary(Program, BinaryLength),
         Binary
     end).

@@ -565,20 +565,20 @@ data_to_vertices(Data, Vertices) ->
 
 acquire_mesh(Data, UsageHint) ->
     ReleaseFun = fun({mesh2, Buffer}) ->
-        ok = gl:delete_buffers(1, [Buffer]),
+        ok = gl:delete_buffers([Buffer]),
         ok
     end,
     AcquireFun = fun() ->
         {ok, [Buffer]} = gl:gen_buffers(1),
         ok = gl:bind_buffer(array_buffer, Buffer),
-        ok = gl:buffer_data(array_buffer, size(Data), Data, UsageHint),
+        ok = gl:buffer_data(array_buffer, Data, UsageHint),
         case gl:get_error() of
-            no_error ->
-                ok = gl:bind_buffer(array_buffer, 0),
+            {ok, no_error} ->
+                ok = gl:bind_buffer(array_buffer, none),
                 {ok, {mesh2, Buffer}, ReleaseFun};
-            out_of_memory ->
+            {ok, out_of_memory} ->
                 % XXX: unit test this behavior
-                ok = gl:delete_buffers(1, [Buffer]),
+                ok = gl:delete_buffers([Buffer]),
                 {error, out_of_memory}
         end
     end,
@@ -590,11 +590,11 @@ release_mesh(ResourceId) ->
 set_mesh_data(Buffer, Data, UsageHint) ->
     graphics_context:execute_commands(fun() ->
         ok = gl:bind_buffer(array_buffer, Buffer),
-        ok = gl:buffer_data(array_buffer, size(Data), Data, UsageHint),
+        ok = gl:buffer_data(array_buffer, Data, UsageHint),
         case gl:get_error() of
-            no_error ->
+            {ok, no_error} ->
                 ok;
-            out_of_memory ->
+            {ok, out_of_memory} ->
                 % XXX: unit test this behavior
                 out_of_memory
         end
@@ -604,14 +604,14 @@ mesh_data(Buffer, Start, Length) ->
     graphics_context:execute_commands(fun() ->
         ok = gl:bind_buffer(array_buffer, Buffer),
         {ok, Data} = gl:get_buffer_sub_data(array_buffer, Start, Length),
-        ok = gl:bind_buffer(array_buffer, 0),
+        ok = gl:bind_buffer(array_buffer, none),
         Data
     end).
 
 update_mesh_data(Buffer, Offset, Data) ->
     graphics_context:execute_commands(fun() ->
         ok = gl:bind_buffer(array_buffer, Buffer),
-        ok = gl:buffer_sub_data(array_buffer, Offset, size(Data), Data),
-        ok = gl:bind_buffer(array_buffer, 0),
+        ok = gl:buffer_sub_data(array_buffer, Offset, Data),
+        ok = gl:bind_buffer(array_buffer, none),
         ok
     end).
