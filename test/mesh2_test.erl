@@ -119,6 +119,8 @@ mesh2_set_vertices_test() ->
 
     % ok = mesh2:destroy(Mesh4),
 
+    % XXX: Test if same GL object.
+    
     ok.
 
 mesh2_vertex_count_test() ->

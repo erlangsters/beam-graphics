@@ -399,15 +399,15 @@ sphere(Center, Radius, Rings, Slices, Color) ->
                 SinSlice*vector3:x(VertexD2) + CosSlice*vector3:z(VertexD2)
             },
 
-            PickColor1 = many_colors:pick(),
-            PickColor2 = many_colors:pick(),
+            % PickColor1 = many_colors:pick(),
+            % PickColor2 = many_colors:pick(),
             NewVertices2 = [
-                ?VERTEX3(NewVertexA2, PickColor1),
-                ?VERTEX3(NewVertexD2, PickColor1),
-                ?VERTEX3(NewVertexB2, PickColor1),
-                ?VERTEX3(NewVertexA2, PickColor2),
-                ?VERTEX3(NewVertexC2, PickColor2),
-                ?VERTEX3(NewVertexD2, PickColor2)
+                ?VERTEX3(NewVertexA2, Color),
+                ?VERTEX3(NewVertexD2, Color),
+                ?VERTEX3(NewVertexB2, Color),
+                ?VERTEX3(NewVertexA2, Color),
+                ?VERTEX3(NewVertexC2, Color),
+                ?VERTEX3(NewVertexD2, Color)
             |Vertices2],
             {{NewVertexA2, NewVertexB2, NewVertexC2, NewVertexD2}, NewVertices2}
 
@@ -432,13 +432,13 @@ sphere(Center, Radius, Rings, Slices, Color) ->
     % Apply scale.
     ScaleMatrix = transform3:scale({Radius, Radius, Radius}),
     Vertices1 = lists:map(fun(Vertex) ->
-        transform3:transform_vertex3(ScaleMatrix, Vertex)
+        transform3:transform_vertex(ScaleMatrix, Vertex)
     end, Vertices0),
 
     % Apply translation.
     TranslationMatrix = transform3:translation(Center),
     Vertices2 = lists:map(fun(Vertex) ->
-        transform3:transform_vertex3(TranslationMatrix, Vertex)
+        transform3:transform_vertex(TranslationMatrix, Vertex)
     end, Vertices1),
 
     {ok, Mesh} = mesh3:with_vertices(lists:reverse(Vertices2)),
@@ -521,13 +521,13 @@ sphere_wires(Center, Radius, Rings, Slices, Color) ->
     % Apply scale.
     ScaleMatrix = transform3:scale({Radius, Radius, Radius}),
     Vertices1 = lists:map(fun(Vertex) ->
-        transform3:transform_vertex3(ScaleMatrix, Vertex)
+        transform3:transform_vertex(ScaleMatrix, Vertex)
     end, Vertices0),
 
     % Apply translation.
     TranslationMatrix = transform3:translation(Center),
     Vertices2 = lists:map(fun(Vertex) ->
-        transform3:transform_vertex3(TranslationMatrix, Vertex)
+        transform3:transform_vertex(TranslationMatrix, Vertex)
     end, Vertices1),
 
     {ok, Mesh} = mesh3:with_vertices(lists:reverse(Vertices2)),

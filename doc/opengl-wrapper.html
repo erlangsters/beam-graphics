@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.38.2">
+    <meta name="project" content="beam_graphics v0.1.0">
+
+
+    <title>OpenGL Wrapper — beam_graphics v0.1.0</title>
+
+    <link rel="stylesheet" href="dist/html-erlang-DQDXQC7W.css" />
+
+    <script defer src="dist/sidebar_items-6C955B32.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-DPJLHKSM.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+beam_graphics
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v0.1.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-extra" id="main" data-type="extras">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of beam_graphics</span>
+            <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          </label>
+          <button type="submit" class="search-button" aria-label="Submit Search" tabindex="-1">
+            <i class="ri-search-2-line ri-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+            <i class="ri-close-line ri-lg" title="Cancel search"></i>
+          </button>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>OpenGL Wrapper</h1>
+
+
+      <a href="https://github.com/erlangsters/beam-graphics/blob/v0.1.0/docs/opengl-wrapper.md#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+<p>The BEAM graphics library is nothing but a wrapper around the OpenGL.</p><p>OpenGL is not process-safe (as opposed to &quot;thread-safe&quot; in C) and it requires 
+to carefully manage OpenGL contexts that must be bound to a process before 
+executing OpenGL commands.</p><p>Then, on top of that, it involves transferring raw data to buffer and 
+programming the rendering pipelines with a shader program. Also, it requires a 
+fair amount of mathematics to understand vertices transformation.</p><p>It's a low-level API that is not for everyone, that's for sure.</p><p>With that said, it's useful to know OpenGL contexts and the OpenGL objects 
+are managed under the hood to make the best out of this library.
+or even interpolate ..xxx</p><h2 id="to-be-written" class="section-heading"><a href="#to-be-written" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">To be written.</span></h2><p>This graphics library merely is a convenient wrapper around OpenGL (or OpenGL
+ES when the former is not available) that eliminates the needs of having
+to write a rendering pipeline (a shader program) and make complicated math
+operations in order to position both objects and cameras.</p><h2 id="mapping-with-opengl-resources" class="section-heading"><a href="#mapping-with-opengl-resources" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Mapping with OpenGL resources</span></h2><p>Every concept in the BEAM graphics library has a one-on-one mapping with a
+OpenGL resources.</p><p><strong>Surface</strong></p><p>Surfaces are
+Note that when you use a window, this is OpenGL frame buffer.</p><p><strong>Vertex Arrays</strong></p><p>Vertex arrays are nothing but OpenGL buffer objects that contains the
+vertices.</p><p>XXX: Explain how vertices are stored in the object.</p><p><strong>Texture</strong></p><p>Textures are nothing but OpenGL textures.</p><p>XXX: Explain constraints put on texture.</p><p><strong>Shader</strong></p><p>Shader are nothing but OpenGL shader programs.</p><p>To be written.</p><h2 id="custom-viewport-and-shader-programs" class="section-heading"><a href="#custom-viewport-and-shader-programs" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Custom viewport and shader programs</span></h2><p>If you define your own rendering pipeline, which means your own shader
+programs, you must say good bye to most helper modules and functions this
+library gives you. Such as the <code class="inline">vertexN_array</code> and <code class="inline">viewN</code>.
+And instead set the viewport yourself.</p><p>To create your own OpenGL shader programs you may still use the <code class="inline">shader</code> and
+<code class="inline">shader_program</code> module. Use the <code class="inline">shader_program:bind/1</code> function to make it
+current.</p><p>Because you're using your own OpenGL shader program, only you knows the
+format of the vertices that are fed, and the transformations to apply in order 
+to get the rendering of yr scene right. Therefore, <code class="inline">vertex_array</code> which pack 
+the vertices in known format, can't be used (unless you decide to make a 
+compatible shader), and the <code class="inline">view</code> can't be used as it's the matrix that 
+transform the vertices. Use the <code class="inline">shader_program:set_uniform/2</code> functions.</p><p>Last, you the output vertices of your shader program is unknown to the library. 
+Therefore, you must manually set the viewport with the <a href="surface.html#set_viewport/2"><code class="inline">surface:set_viewport/2</code></a>
+function yourself.</p><p>Finally, after you're done rendering on the surface, with your own OpenGL 
+calls, you may use the usual <code class="inline">surface:swap/x</code> function and do the rest as 
+you always do.</p>
+
+</div>
+
+<div class="bottom-actions" id="bottom-actions">
+  <div class="bottom-actions-item">
+
+      <a href="going-native.html" class="bottom-actions-button" rel="prev">
+        <span class="subheader">
+          ← Previous Page
+        </span>
+        <span class="title">
+Going native
+        </span>
+      </a>
+
+  </div>
+  <div class="bottom-actions-item">
+
+      <a href="display-window.html" class="bottom-actions-button" rel="next">
+        <span class="subheader">
+          Next Page →
+        </span>
+        <span class="title">
+Display graphics on a window
+        </span>
+      </a>
+
+  </div>
+</div>
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/beam_graphics/0.1.0" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/beam_graphics/0.1.0">Hex Preview</a>
+
+              (<a href="https://preview.hex.pm/preview/beam_graphics/0.1.0/show/docs/opengl-wrapper.md">current file</a>)
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="beam_graphics.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.38.2) for the
+
+          <a href="https://erlang.org" title="Erlang" target="_blank" translate="no">Erlang programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

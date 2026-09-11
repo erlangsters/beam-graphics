@@ -395,16 +395,16 @@ to_usage_hint_raw(UsageHint) ->
 
 vertices_to_data(Vertices) ->
     lists:foldl(
-        fun({X, Y, Z, {R, G, B, A}, U, V}, Acc) ->
+        fun({{X, Y, Z}, {R, G, B, A}, U, V}, Acc) ->
             <<
                 Acc/binary,
                 X:32/float-little,
                 Y:32/float-little,
                 Z:32/float-little,
-                R:8/integer-little,
-                G:8/integer-little,
-                B:8/integer-little,
-                A:8/integer-little,
+                R:32/float-little,
+                G:32/float-little,
+                B:32/float-little,
+                A:32/float-little,
                 U:32/float-little,
                 V:32/float-little
             >>
@@ -423,15 +423,15 @@ data_to_vertices(Data, Vertices) ->
         X:32/float-little,
         Y:32/float-little,
         Z:32/float-little,
-        R:8/integer-little,
-        G:8/integer-little,
-        B:8/integer-little,
-        A:8/integer-little,
+        R:32/float-little,
+        G:32/float-little,
+        B:32/float-little,
+        A:32/float-little,
         U:32/float-little,
         V:32/float-little,
         DataRest/binary
     >> = Data,
-    Vertex = {X, Y, Z, {R, G, B, A}, U, V},
+    Vertex = {{X, Y, Z}, {R, G, B, A}, U, V},
     data_to_vertices(DataRest, [Vertex | Vertices]).
 
 acquire_mesh(Data, UsageHint) ->
@@ -444,10 +444,10 @@ acquire_mesh(Data, UsageHint) ->
         ok = gl:bind_buffer(array_buffer, Buffer),
         ok = gl:buffer_data(array_buffer, size(Data), Data, UsageHint),
         case gl:get_error() of
-            {ok, no_error} ->
+            no_error ->
                 ok = gl:bind_buffer(array_buffer, 0),
                 {ok, {mesh3, Buffer}, ReleaseFun};
-            {ok, out_of_memory} ->
+            out_of_memory ->
                 % XXX: unit test this behavior
                 ok = gl:delete_buffers(1, [Buffer]),
                 {error, out_of_memory}
@@ -463,9 +463,9 @@ set_mesh_data(Buffer, Data, UsageHint) ->
         ok = gl:bind_buffer(array_buffer, Buffer),
         ok = gl:buffer_data(array_buffer, size(Data), Data, UsageHint),
         case gl:get_error() of
-            {ok, no_error} ->
+            no_error ->
                 ok;
-            {ok, out_of_memory} ->
+            out_of_memory ->
                 % XXX: unit test this behavior
                 out_of_memory
         end

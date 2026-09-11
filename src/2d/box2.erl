@@ -21,6 +21,8 @@ To be written.
 -export([
     contains/2,
     intersects/2
+    % find_intersection/2,
+    % center/1
 ]).
 
 -doc """

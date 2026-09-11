@@ -466,6 +466,14 @@ initialize([Display, Window, Width, Height]) ->
     end,
 
     ContextAttribs = [
+        % % % {context_opengl_profile_mask, [context_opengl_core_profile_bit]},
+        % {context_opengl_forward_compatible, true},
+
+        % {context_opengl_robust_access, false},
+        % % {context_opengl_debug, true},
+        % % % {context_opengl_reset_notification_strategy, lose_context_on_reset},
+        % % {context_opengl_reset_notification_strategy, no_reset_notification},
+
         {context_major_version, 4},
         {context_minor_version, 6}
     ],
@@ -473,6 +481,7 @@ initialize([Display, Window, Width, Height]) ->
     {ok, Context} =
         egl:create_context(Display, Config, ShareContext, ContextAttribs),
 
+    egl_helper:print_context(Display, Context),
     {ok, Surface} = case SurfaceType of
         pbuffer ->
             SurfaceAttribs = [{width, Width}, {height, Height}],
@@ -480,6 +489,7 @@ initialize([Display, Window, Width, Height]) ->
         window ->
             egl:create_window_surface(Display, Config, Window, [])
     end,
+    % egl_helper:print_surface(Display, Surface), % XXX: For some reason, it does not work.
 
     ok = egl:make_current(Display, Surface, Surface, Context),
 

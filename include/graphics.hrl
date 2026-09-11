@@ -46,7 +46,7 @@
 -define(VERTEX2(Position),
     begin
         {
-            element(1, Position), element(2, Position),
+            {element(1, Position), element(2, Position)},
             ?COLOR_BLACK,
             0.0, 0.0
         }
@@ -56,7 +56,7 @@
 -define(VERTEX2(Position, Color),
     begin
         {
-            element(1, Position), element(2, Position),
+            {element(1, Position), element(2, Position)},
             Color,
             0.0, 0.0
         }
@@ -66,7 +66,7 @@
 -define(VERTEX3(Position),
     begin
         {
-            element(1, Position), element(2, Position), element(3, Position),
+            {element(1, Position), element(2, Position), element(3, Position)}
             ?COLOR_BLACK,
             0.0, 0.0
         }
@@ -76,7 +76,7 @@
 -define(VERTEX3(Position, Color),
     begin
         {
-            element(1, Position), element(2, Position), element(3, Position),
+            {element(1, Position), element(2, Position), element(3, Position)},
             Color,
             0.0, 0.0
         }
@@ -94,3 +94,48 @@
     matrix = ?MATRIX4_IDENTITY :: graphics:matrix4(),
     texture = no_texture  :: no_texture | graphics:texture()
 }).
+
+% -record(blend_mode, {
+%     color_src_factor :: blend_mode:factor()   = src_alpha,
+%     color_dst_factor :: blend_mode:factor()   = one_minus_src_alpha,
+%     color_equation   :: blend_mode:equation() = add,
+%     alpha_src_factor :: blend_mode:factor()   = one,
+%     alpha_dst_factor :: blend_mode:factor()   = one_minus_src_alpha,
+%     alpha_equation   :: blend_mode:equation() = add
+% }).
+
+% -define(BLEND_ALPHA, #blend_mode{
+%     color_src_factor   = src_alpha,
+%     color_dst_factor   = one_minus_src_alpha,
+%     color_equation     = add,
+%     alpha_src_factor   = one,
+%     alpha_dst_factor   = one_minus_src_alpha,
+%     alpha_equation     = add
+% }).
+
+% -define(BLEND_ADD, #blend_mode{
+%     color_src_factor   = one,
+%     color_dst_factor   = one,
+%     color_equation     = add,
+%     alpha_src_factor   = one,
+%     alpha_dst_factor   = one,
+%     alpha_equation     = add
+% }).
+
+% -define(BLEND_MULTIPLY, #blend_mode{
+%     color_src_factor   = src_color,
+%     color_dst_factor   = one_minus_src_color,
+%     color_equation     = add,
+%     alpha_src_factor   = src_alpha,
+%     alpha_dst_factor   = one_minus_src_alpha,
+%     alpha_equation     = add
+% }).
+
+% -define(BLEND_NONE, #blend_mode{
+%     color_src_factor   = zero,
+%     color_dst_factor   = zero,
+%     color_equation     = add,
+%     alpha_src_factor   = zero,
+%     alpha_dst_factor   = zero,
+%     alpha_equation     = add
+% }).

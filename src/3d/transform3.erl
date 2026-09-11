@@ -91,8 +91,23 @@ To be written.
 """.
 -spec transform_vertex(graphics:matrix4(), graphics:vertex3()) ->
     graphics:vertex3().
-transform_vertex(_Matrix, _Vertex) ->
-    ok.
+transform_vertex(Matrix, {{X, Y, Z}, Color, U, V}) ->
+    W = 1, % Homogeneous coordinate
+    
+    % Matrix is in column-major order, so we access elements accordingly
+    X2 = X*element(1, Matrix) + Y*element(5, Matrix) + Z*element(9, Matrix) + W*element(13, Matrix),
+    Y2 = X*element(2, Matrix) + Y*element(6, Matrix) + Z*element(10, Matrix) + W*element(14, Matrix),
+    Z2 = X*element(3, Matrix) + Y*element(7, Matrix) + Z*element(11, Matrix) + W*element(15, Matrix),
+    W2 = X*element(4, Matrix) + Y*element(8, Matrix) + Z*element(12, Matrix) + W*element(16, Matrix),
+    
+    % Perspective division if W2 is not 1
+    {NewX, NewY, NewZ} = if
+        W2 =:= 1.0 ->
+            {X2, Y2, Z2};
+        true ->
+            {X2/W2, Y2/W2, Z2/W2}
+    end,
+    {{NewX, NewY, NewZ}, Color, U, V}.
 
 -doc """
 To be written.

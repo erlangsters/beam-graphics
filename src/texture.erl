@@ -9,9 +9,124 @@
 %%
 -module(texture).
 -moduledoc """
+Texture
+
+A texture is a 2D array of pixels (or in other words, an image) that can be used
+for rendering. They are indirectly rendered on a surface with a 2D or 3D mesh
+that specifies texture coordinates for each vertex.
+
+For instance, the following will render an image.
+
+```erlang
+Mesh = mesh:with_vertices([
+    {100.0, 100.0, 1.0, 0.0},
+    {700.0, 100.00, 1.0, 1.0},
+    {700.0, 500.00, 0.0, 1.0},
+    {700.0, 500.00, 0.0, 0.0}
+]).
+Texture = texture:with_image({800, 600, load_image("image.png")}).
+surface:render(Surface, Mesh, triangle_strip, Texture).
+```
+
+Texture pixels must live in the GPU memory in order to be used for rendering,
+and therefore, reading and updating pixels have an associated cost. Avoid
+those operations as much as possible, and if frequent reading is required,
+pixels can be cached locally with the `keep_copy` option. It explains the
+local/remote semantics in the API. For instance, `local_image/1` will read the
+pixels from a local copy (if it exists), while `remote_image/1` will read the
+pixels from the GPU memory (which is more expensive).
+
+---
+
+To create a texture, use the `with_image/1` and `with_image/2` functions.
+The texture is later disposed with the `destroy/1` function, which will
+remove the texture from the GPU memory and free the associated resources.
+
+> Using a destroyed texture have undefined behavior.
+
+> Note that there cannot be "empty" texture and it must be at least 1x1 pixel
+> in size.
+
+> Note that it can return 'out of memory' but in practice it hardly happens
+> so you can ignore it. xxx
+
+For convenience, the `with_color/3` and `with_color/4` functions can be used to
+create a texture filled with a single color.
+
+To change the image of a texture, which can potentially resize the texture, use
+the `set_image/2` function.
+
+> NOTE: The advantage of using `set_image/2` over re-creating another texture
+> is that it will keep the internal OpenGL object ID.  Use `update_image/2`
+> to update the pixels of a texture without changing its size.
+
+Use the `with/1` and `height/2` functions to retrieve the width and height of
+the texture.
+
+To retrieve all the pixels of a texture, or a sub-set of them, use the
+`local_image/1`, `local_image/3`, `remote_image/1`, and `remote_image/3`
+functions. The "local" version of those functions will read the pixels from a
+locally cached pixels, if a copy was requested at creation time with the
+`keep_copy` option. The "remote" version will read the pixels from the GPU
+memory, which is more expensive.
+
+The `local_pixel/3` and `remote_pixel/3` functions allows to retrieve a single
+pixel at a given position in the texture.
+
+> NOTE: Those functions implement the slice API which allows you to easily
+> retrieve sub-regions of the texture. For instance, you can you retrieve the
+> the bottom-right pixel of a texture with `remote_pixel(Texture, -1, -1)`.
+
+To
+
+**OpenGL Internals**
+
+It wraps a texture OpenGL object.
 To be written.
 
-To be written.
+
+Use the `handle/1` function to retrieve the OpenGL buffer ID.
+It's created by the root context, which you can retrieve with the
+`graphics_context:inner_context/0` function.
+
+
+XXX: No possible optimization (like retrieving a sub-region of the texture) unless using OpenGL 4.5 (glGetTextureSubImage).
+
+XXX: Implement copy operations ?
+XXX: Investigate any other potential OpenGL texture "properties" I'm not ware
+     of (swizzle ? texture compare mode? border color? anisotropic filtering?)., etc
+    multisample textures (anti-aliasing), etc.
+XXX: Or just add documentation to show how to run the raw opengl contexts to
+    switch thowse advanced properties.
+
+XXX: Perhaps swizzle mask and compare mode  could be an interesting property
+     to b e exposed.
+
+```
+-export([
+    set_border_color/2,  % For border handling
+    set_swizzle_mask/2,  % Control RGBA channel swizzling
+    set_compare_mode/2,  % For shadow mapping
+    set_lod_parameters/5,  % LOD bias, min, max
+    set_max_anisotropy/2,  % For anisotropic filtering
+    create_from_framebuffer/3  % Create texture from current framebuffer
+]).
+```
+
+
+separete repo with `cubemap_texture`  ?
+
+```
+-export([
+    with_array/2,  % Create texture array
+    with_cubemap/1,  % Create cubemap texture
+    update_cubemap_face/3  % Update specific cubemap face
+]).
+```
+
+
+update wrap mode api to suppor thorizontal and vertical
+
 """.
 
 -export_type([
@@ -34,7 +149,7 @@ To be written.
     object/0
 ]).
 -export([
-    with_image/1, with_image/2,
+    with_image/1, with_image/2, with_image/3,
     with_color/2, with_color/3, with_color/4,
     destroy/1,
     set_image/2, set_image/3,
@@ -50,7 +165,8 @@ To be written.
 ]).
 -export([
     update_from_color/2, update_from_color/3,
-    update_from_texture/2, update_from_texture/3
+    update_from_texture/2, update_from_texture/3,
+    update_from_surface/2, update_from_surface/3
 ]).
 -export([
     minification_filter/1,
@@ -73,6 +189,29 @@ To be written.
     keep_local_copy/1,
     release_local_copy/1
 ]).
+
+-compile({inline, [
+    with_image/1, with_image/2,
+    with_color/2, with_color/3, with_color/4
+]}).
+-compile({inline, [
+    set_image/2,
+    resize/2, resize/3,
+    size/1,
+    color_space/1,
+    local_image/1
+]}).
+-compile({inline, [
+    minification_filter/1,
+    magnification_filter/1,
+    wrap_mode/2
+]}).
+-compile({inline, [
+    gl_object/1
+]}).
+-compile({inline, [
+    has_local_copy/1
+]}).
 
 -include_lib("gl/include/gl.hrl").
 -include_lib("beam_graphics/include/graphics.hrl").
@@ -329,6 +468,8 @@ To be written.
     {ok, object()} | out_of_memory
 .
 resize(Texture, {Width, Height}, Color, ColorSpace) ->
+    % XXX: Might be rewritten to keep existing image intact (just fill the new 
+    %      space).
     Image = {Width, Height, lists:duplicate(Width * Height, Color)},
     set_image(Texture, Image, ColorSpace).
 
@@ -491,23 +632,25 @@ To be written.
 """.
 -spec update_image(object(), image(), slice:offset(), slice:offset()) -> {ok, object()}.
 update_image(
-    {ResourceId, _, _, _, _, _, _LocalPixels},
+    {ResourceId, _, _, _, _, _, _LocalPixels} = Texture,
     Image,
-    _OffsetX,
-    _OffsetY
+    OffsetX,
+    OffsetY
 ) ->
     {Width, Height, Pixels} = Image,
     Data = pixels_to_data(Pixels),
-    {texture, Texture} = ResourceId,
-    ok = update_texture_data(Texture, Width, Height, Data, 0, 0),
+    {texture, GlTexture} = ResourceId,
+    ok = update_texture_data(GlTexture, Width, Height, Data, OffsetX, OffsetY),
     % x = case LocalPixels of
     %     undefined ->
     %         {ResourceId, Width, Height, undefined};
     %     _ ->
     %         {ResourceId, Width, Height, Pixels}
     % end,
-    NewTexture = {ResourceId, Width, Height, undefined},
-    {ok, NewTexture}.
+    % NewTexture = {ResourceId, Width, Height, undefined},
+    % {ok, NewTexture}.
+    {ok, Texture}.
+
 
 -doc """
 To be written.
@@ -567,6 +710,30 @@ To be written.
 update_from_texture(
     {_ResourceId, {_With, _Height}, _, _, _, _, _LocalPixels},
     _Texture,
+    {_OffsetX, _OffsetY}
+) ->
+    ok.
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec update_from_surface(object(), graphics:color()) ->
+    {ok, object()}.
+update_from_surface(Texture, Surface) ->
+    update_from_surface(Texture, Surface, {0, 0}).
+
+-doc """
+To be written.
+
+To be written.
+""".
+-spec update_from_surface(object(), graphics:color(), {slice:offset(), slice:offset()}) ->
+    {ok, object()}.
+update_from_surface(
+    {_ResourceId, {_With, _Height}, _, _, _, _, _LocalPixels},
+    _Surface,
     {_OffsetX, _OffsetY}
 ) ->
     ok.
@@ -739,7 +906,7 @@ release_local_copy(Texture) ->
     {ok, NewTexture}.
 
 color_space_to_internal_format(linear) ->
-    rgba8;
+    rgba32f;
 color_space_to_internal_format(s_rgb) ->
     srgb8_alpha8.
 
@@ -748,10 +915,10 @@ pixels_to_data(Pixels) ->
         fun({R, G, B, A}, Acc) ->
             <<
                 Acc/binary,
-                R:8/integer-little,
-                G:8/integer-little,
-                B:8/integer-little,
-                A:8/integer-little
+                R:32/float-little,
+                G:32/float-little,
+                B:32/float-little,
+                A:32/float-little
             >>
         end,
         <<>>,
@@ -765,18 +932,22 @@ data_to_pixels(<<>>, Pixels) ->
     lists:reverse(Pixels);
 data_to_pixels(Data, Pixels) ->
     <<
-        R:8/integer-little,
-        G:8/integer-little,
-        B:8/integer-little,
-        A:8/integer-little,
+        R:32/float-little,
+        G:32/float-little,
+        B:32/float-little,
+        A:32/float-little,
         DataRest/binary
     >> = Data,
     Pixel = {R, G, B, A},
     data_to_pixels(DataRest, [Pixel | Pixels]).
 
 image_area(Width, _Height, LocalPixels, OffsetX, LengthX, OffsetY, LengthY) ->
+    io:format(user, "Width: ~p, Height: ~p, OffsetX: ~p, LengthX: ~p, OffsetY: ~p, LengthY: ~p~n",
+        [Width, length(LocalPixels) div Width, OffsetX, LengthX, OffsetY, LengthY]),
+    % io:format(user, "tesT: ~p~n", [lists:seq(OffsetY, OffsetY + LengthY - 1)]),
     AreaPixels = lists:foldl(fun(Row, Acc) ->
         Offset = (Row-1) * Width,
+        io:format(user, "Row: ~p, Offset: ~p, OffsetX: ~p, LengthX: ~p~n", [Row, Offset, OffsetX, LengthX]),
         Acc ++ lists:sublist(LocalPixels, Offset + OffsetX, LengthX)
     end, [], lists:seq(OffsetY, OffsetY + LengthY - 1)),
     {LengthX, LengthY, AreaPixels}.
@@ -806,10 +977,11 @@ acquire_texture(Width, Height, Data, InternalFormat) when Width > 0 andalso Heig
         ok = gl:tex_image_2d(
             texture_2d, 0, InternalFormat,
             Width, Height, 0,
-            rgba, unsigned_byte,
+            rgba, float,
             Data
         ),
-
+        ok = gl:flush(),
+        
         {ok, {texture, Texture}, ReleaseFun}
     end,
     graphics_context:acquire_resource(AcquireFun).
@@ -818,13 +990,13 @@ release_texture(ResourceId) ->
     graphics_context:release_resource(ResourceId).
 
 texture_data(Texture, Width, Height) ->
-    Size = Width * Height * 4,
+    Size = Width * Height * 4 * 4, % 4 channels, 4 bytes each
 
     graphics_context:execute_commands(fun() ->
         ok = gl:bind_texture(texture_2d, Texture),
         {ok, Data} = gl:get_tex_image(
             texture_2d, 0,
-            rgba, unsigned_byte,
+            rgba, float,
             Size
         ),
         ok = gl:bind_texture(texture_2d, 0),
@@ -838,9 +1010,11 @@ update_texture_data(Texture, Width, Height, Data, OffsetX, OffsetY) ->
             texture_2d, 0,
             OffsetX, OffsetY,
             Width, Height,
-            rgba, unsigned_byte,
+            rgba, float,
             Data
         ),
+        ok = gl:flush(),
+
         ok = gl:bind_texture(texture_2d, 0),
         ok
     end).

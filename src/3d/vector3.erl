@@ -76,6 +76,14 @@ Finally, the 3D vector can be reduced to a 2D vector with the `to_vector2/1`
 function.
 
 Beware that a well-formed 3D vector always contains floats, not integers.
+
+XXX: Consider implementing the 'rotation' operation.
+XXX: There should be helpers to ensure integers are converted to floats when the user input may contain integers.
+
+    scale/2 - Explicit scalar multiplication (clearer intent than multiply)
+    divide/2 - Component-wise division
+    negate/1 - Returns the negative of the vector
+
 """.
 
 -export([
@@ -503,5 +511,5 @@ lerp({X1, Y1, Z1}, {X2, Y2, Z2}, T) ->
 To be written.
 """.
 -spec smooth_lerp(graphics:vector3(), graphics:vector3(), float()) -> graphics:vector3().
-smooth_lerp(V1, V2, T) ->
-    smooth_lerp(V1, V2, T * T * (3.0 - 2.0 * T)).
+smooth_lerp(Vector1, Vector2, T) ->
+    lerp(Vector1, Vector2, T * T * (3.0 - 2.0 * T)).

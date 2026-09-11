@@ -13,46 +13,41 @@
 The missing graphics library of the BEAM ecosystem available for the Erlang and
 Elixir programming language.
 
-It provides a minimal API for graphics rendering and is built on top of EGL,
-OpenGL and OpenGL ES. For advanced uses, [interpolation with the underlying
-graphics library](https://docs.erlangsters.org/beam-graphics/latest/opengl-interpolation)
-is possible.
+Inspired by leading multimedia frameworks, it provides a general-purpose API 
+for graphics rendering. It's is built on top of EGL and OpenGL ES, and all 
+major platforms are supported.
 
-```erlang
-{deps, [
-  {beam_graphics, {git, "https://github.com/erlangsters/beam-graphics.git", {tag, "master"}}}
-]}.
-```
+> It does not provide any window capabilities. You may want to use 
+> the [GLFW](https://github.com/erlangsters/glfw) to display the graphics on 
+> the screen.
 
-Supported platforms.
+Companion libraries that extend it are also available.
 
-- [x] Linux
-- [ ] macOS
-- [ ] Windows
-- [ ] iOS*
-- [ ] Android*
+- 2D/3D shapes: https://github.com/erlangsters/beam-graphics-shapes
+- Image loader/saver: https://github.com/erlangsters/beam-graphics-image
+- Text rendering: https://github.com/erlangsters/beam-graphics-text
+
+For advanced uses, interpolation with the underlying OpenGL library is also 
+possible.
 
 Written by the Erlangsters [community](https://about.erlangsters.org/) and
 released under the MIT [license](/https://opensource.org/license/mit).
 
-> Note that it does not provide any window capabilities. See the
-[BEAM window library](https://github.com/erlangsters/beam-window) to display
-graphics on the screen.
-
 ## Getting started
 
-To render anything, you must first create a surface which will contain the result
-of whatever you're rendering (be it a 2D or 3D object).
+To render anything, you must first create a surface which will contain the 
+result of whatever you're rendering (be it a 2D or 3D object).
 
 ```erlang
-{ok, S} = surface:new({640, 480}).
+{ok, Surface} = surface:new({640, 480}).
 ```
 
-See a surface as a 2D image actually. And it's not uncommon to start rendering
-fresh and fill the surface with an even color.
+> See a surface as a 2D image actually. 
+
+Almost always, you want to fill the surface with an even color first.
 
 ```erlang
-ok = surface:erase(S, ?COLOR_BLACK).
+ok = surface:erase(Surface, ?COLOR_BLACK).
 ```
 
 The actual rendering is covered in one of the sections below, depending on
@@ -82,10 +77,10 @@ View = view2:new({0, 0}, {320, 240}),
 
 surface:set_view(View)
 Square = [
-    {1, 2, 3, 0, 0, ?COLOR_RED},
-    {1, 2, 3, 0, 0, ?COLOR_RED},
-    {1, 2, 3, 0, 0, ?COLOR_RED},
-    {1, 2, 3, 0, 0, ?COLOR_RED}
+  {1, 2, 3, 0, 0, ?COLOR_RED},
+  {1, 2, 3, 0, 0, ?COLOR_RED},
+  {1, 2, 3, 0, 0, ?COLOR_RED},
+  {1, 2, 3, 0, 0, ?COLOR_RED}
 ],
 
 surface:draw(strip_triangle, Square),
@@ -156,7 +151,7 @@ save_to_disk(Image, jpeg) ->
 save_to_disk(Image, bmp) ->
   image_png:save(Image, "result.bmp").
 ```
-
+8
 To be written.
 
 ## Going native
@@ -198,3 +193,9 @@ surface:draw(S, V, Shader).
 
 An entire section in the documentation is dedicated to advanced rendering by
 showing you, and foo and bar.
+
+## Companion libraries
+
+To be written.
+
+If you have written a librairies that nicely complement 
