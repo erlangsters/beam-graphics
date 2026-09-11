@@ -38,7 +38,8 @@ rotated, then moved to the position. Rotation is `{Angle, Axis}`.
 
 Rotation uses Rodrigues' formula around the given axis, matching
 `vector3:rotate/3`. The axis is normalized internally. A zero axis yields IEEE
-`inf` or `NaN`. Angles are in radians.
+`inf` or `NaN`. `rotation_x/1`, `rotation_y/1`, and `rotation_z/1` are the
+principal-axis constructors. Angles are in radians.
 
 Beware that a well-formed 4x4 matrix always contains floats, not integers.
 """.
@@ -46,6 +47,7 @@ Beware that a well-formed 4x4 matrix always contains floats, not integers.
 -export([
     translation/1,
     rotation/2,
+    rotation_x/1, rotation_y/1, rotation_z/1,
     scale/1
 ]).
 -export([
@@ -114,6 +116,36 @@ rotation(Angle, Axis) ->
         R13, R23, R33, 0.0,
         0.0, 0.0, 0.0, 1.0
     }.
+
+-doc """
+A rotation 4x4 matrix around the X axis.
+
+It constructs a 4x4 matrix that rotates around the X axis by the given angle in
+radians. It is the same as `rotation(Angle, {1.0, 0.0, 0.0})`.
+""".
+-spec rotation_x(graphics:angle()) -> graphics:matrix4().
+rotation_x(Angle) ->
+    rotation(Angle, {1.0, 0.0, 0.0}).
+
+-doc """
+A rotation 4x4 matrix around the Y axis.
+
+It constructs a 4x4 matrix that rotates around the Y axis by the given angle in
+radians. It is the same as `rotation(Angle, {0.0, 1.0, 0.0})`.
+""".
+-spec rotation_y(graphics:angle()) -> graphics:matrix4().
+rotation_y(Angle) ->
+    rotation(Angle, {0.0, 1.0, 0.0}).
+
+-doc """
+A rotation 4x4 matrix around the Z axis.
+
+It constructs a 4x4 matrix that rotates around the Z axis by the given angle in
+radians. It is the same as `rotation(Angle, {0.0, 0.0, 1.0})`.
+""".
+-spec rotation_z(graphics:angle()) -> graphics:matrix4().
+rotation_z(Angle) ->
+    rotation(Angle, {0.0, 0.0, 1.0}).
 
 -doc """
 A scale 4x4 matrix.

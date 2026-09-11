@@ -76,6 +76,45 @@ transform3_rotation_test() ->
     end,
     ok.
 
+transform3_rotation_x_test() ->
+    true = matrix4:is_equal_to(
+        transform3:rotation_x(?ANGLE_90),
+        transform3:rotation(?ANGLE_90, {1.0, 0.0, 0.0}),
+        ?EPS
+    ),
+    true = vector3:is_equal_to(
+        transform3:transform_point(transform3:rotation_x(?ANGLE_90), {0.0, 1.0, 0.0}),
+        {0.0, 0.0, 1.0},
+        ?EPS
+    ),
+    ok.
+
+transform3_rotation_y_test() ->
+    true = matrix4:is_equal_to(
+        transform3:rotation_y(?ANGLE_90),
+        transform3:rotation(?ANGLE_90, {0.0, 1.0, 0.0}),
+        ?EPS
+    ),
+    true = vector3:is_equal_to(
+        transform3:transform_point(transform3:rotation_y(?ANGLE_90), {0.0, 0.0, 1.0}),
+        {1.0, 0.0, 0.0},
+        ?EPS
+    ),
+    ok.
+
+transform3_rotation_z_test() ->
+    true = matrix4:is_equal_to(
+        transform3:rotation_z(?ANGLE_90),
+        transform3:rotation(?ANGLE_90, {0.0, 0.0, 1.0}),
+        ?EPS
+    ),
+    true = vector3:is_equal_to(
+        transform3:transform_point(transform3:rotation_z(?ANGLE_90), {1.0, 0.0, 0.0}),
+        {0.0, 1.0, 0.0},
+        ?EPS
+    ),
+    ok.
+
 transform3_scale_test() ->
     true = vector3:is_equal_to(
         transform3:transform_point(transform3:scale({2.0, 3.0, 4.0}), {1.0, 2.0, 3.0}),
