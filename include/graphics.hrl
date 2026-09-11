@@ -66,7 +66,7 @@
 -define(VERTEX3(Position),
     begin
         {
-            {element(1, Position), element(2, Position), element(3, Position)}
+            {element(1, Position), element(2, Position), element(3, Position)},
             ?COLOR_BLACK,
             0.0, 0.0
         }
@@ -84,13 +84,13 @@
 ).
 
 -record(shape2, {
-    meshes :: [{mesh2:mesh(), graphics:primitive_type(), graphics:vertex_count()}],
+    meshes :: [{graphics:mesh2(), graphics:primitive_type(), graphics:vertex_count()}],
     matrix = ?MATRIX3_IDENTITY :: graphics:matrix3(),
     texture = no_texture :: no_texture | graphics:texture()
 }).
 
 -record(shape3, {
-    meshes :: [{mesh3:mesh(), graphics:primitive_type(), graphics:vertex_count()}],
+    meshes :: [{graphics:mesh3(), graphics:primitive_type(), graphics:vertex_count()}],
     matrix = ?MATRIX4_IDENTITY :: graphics:matrix4(),
     texture = no_texture  :: no_texture | graphics:texture()
 }).

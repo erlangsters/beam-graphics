@@ -183,9 +183,14 @@ second is the maximum corner.
 }.
 
 -doc """
-To be written.
+A 2D vertex.
 
-To be written.
+A 2D position, a color, and UV texture coordinates typically used to describe
+a point of 2D geometry.
+
+There is no `vertex2` module. `box2:from_vertices/1` ignores the color and UV
+coordinates. `transform2:transform_vertex/2` transforms the position and leaves
+the color and UV coordinates unchanged.
 """.
 -type vertex2() :: {
     Position :: vector2(),
@@ -195,9 +200,14 @@ To be written.
 }.
 
 -doc """
-To be written.
+A 3D vertex.
 
-To be written.
+A 3D position, a color, and UV texture coordinates typically used to describe
+a point of 3D geometry.
+
+There is no `vertex3` module. `box3:from_vertices/1` ignores the color and UV
+coordinates. `transform3:transform_vertex/2` transforms the position and leaves
+the color and UV coordinates unchanged.
 """.
 -type vertex3() :: {
     Position :: vector3(),

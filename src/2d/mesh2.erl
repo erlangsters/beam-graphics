@@ -11,98 +11,55 @@
 -moduledoc """
 2D Mesh
 
-A 2D mesh is a collection of 2D vertices which are used for rendering. Each 2D
-vertex specifies a position in 2D space, a color and texture coordinates. They
-are rendered on a surface by using one of the following rendering primitives,
-and an optional texture.
+A 2D mesh is a collection of 2D vertices that is typically used for rendering.
 
-For instance, the following will render a colored triangle.
+A 2D mesh is an opaque object that wraps GPU vertex data. It is created with
+the `with_vertices` functions and disposed with the `destroy/1` function.
+Copying the term does not copy the GPU buffer.
+
+Each 2D vertex is a position, a color, and UV texture coordinates (see
+`graphics:vertex2()`). Meshes are rendered on a surface with a primitive type
+and an optional texture. The primitive type and the texture are not part of
+the mesh; they are arguments of `surface:draw_mesh2/4` and of `shape2`.
 
 ```erlang
-Mesh = mesh:with_vertices([
-    {100.0, 100.0, ?COLOR_RED, 0.0, 0.0},
-    {700.0, 100.00, ?COLOR_GREEN, 0.0, 0.0},
-    {700.0, 500.00, ?COLOR_BLUE, 0.0, 0.0}
+{ok, Mesh} = mesh2:with_vertices([
+    {{100.0, 100.0}, ?COLOR_RED, 0.0, 0.0},
+    {{700.0, 100.0}, ?COLOR_GREEN, 0.0, 0.0},
+    {{700.0, 500.0}, ?COLOR_BLUE, 0.0, 0.0}
 ]).
-surface:render(Surface, Mesh, triangle_fan, no_texture).
+ok = surface:draw_mesh2(Surface, Mesh, triangles, 3).
 ```
 
-> How vertices are used to produce a visual output depends on the rendering
-> primitive which is described in the OpenGL documentation.
+Together with 3D meshes, meshes are the only means for rendering. Anything
+else (for example sprites, text, or shapes) is a higher-level abstraction that
+indirectly uses meshes.
 
-> Together with 3D meshes, meshes are the only mean for rendering. Anything
-> else (.e.g., sprites, text, shapes, etc.) is a higher-level abstraction that
-> indirectly uses meshes for rendering.
+Vertex data must live in GPU memory in order to be used for rendering, so
+reading and updating vertices have an associated cost. Avoid those operations
+when they are not needed. If frequent reading is required, vertices can be
+cached locally with the `keep_copy` option at construction, or later with
+`keep_local_copy/1`. `local_vertices/1` reads the local copy when it exists.
+`remote_vertices/1` reads from GPU memory, which is more expensive. By
+default, no local copy is kept.
 
-Mesh vertices must live in the GPU memory in order to be used for rendering,
-and therefore, reading and updating vertices have an associated cost. Avoid
-those operations as much as possible, and if frequent reading is required,
-pixels can be cached locally with the `keep_copy` option. It explains the
-local/remote semantics in the API. For instance, `local_vertices/1` will read
-the vertices from a local copy (if it exists), while `remote_image/1` will read
-the vertices from the GPU memory (which is more expensive).
+When vertices are updated often, specify a usage hint (`static`, `dynamic`, or
+`stream`) so the GPU can handle the data more efficiently. The default is
+`static`.
 
-While updating a 2D mesh should be avoided when not necessary, it's acceptable
-to frequently update its vertices. To help the GPU with handling the data in
-the most optimal way, you can specify a usage hint when setting the vertices.
+An empty mesh is allowed. `set_vertices(Mesh, [])` clears the vertices.
 
-
-
-
-
-
-
-
-To empty the mesh, you can call `set_vertices(Mesh, [])`.
-If you need to "pre-allocate" the mesh. Fill it with "zero" vertices.
-
-
+Beware that a well-formed 2D vertex always contains floats, not integers.
 
 **OpenGL Internals**
 
-It wraps a buffer object.
-To be written.
-
-Use the `handle/1` function to retrieve the OpenGL buffer ID.
-It's created by the root context, which you can retrieve with the
-`graphics_context:inner_context/0` function.
-
-```
-XXX: The slice:offset in update_vertices and vertex functions is weird.
-XXX: Clarify what happens if destroyed twice ?
-XXX: Implement a merge/x or combine/x function to concatenate two meshes.
-XXX: Update vertices functions are to be implemented.
-XXX: Implement transfer "ownership".
-XXX: Consider vector2() instead of X, Y.
-XXX: Consider adding a sort of "normalized_float()" type for U V components.
-XXX: Should it expose the other usage hint (OpenGL defines more than that).
-XXX: Consider combining `no_copy | keep_copy` and usage_hint() into an "options".
-XXX: Consider implementing:
-
--spec set_position(mesh3(), index(), vector3()) -> ok.
--spec set_color(mesh3(), index(), color_rgba()) -> ok.
--spec set_texcoord(mesh3(), index(), vector2()) -> ok.
-
-
-XXX: About usage hints:
-
-OpenGL Usage Hint	Meaning
-GL_STATIC_DRAW (default)	Data set once, used many times (e.g., level geometry)
-GL_DYNAMIC_DRAW	Data modified occasionally, used many times (e.g., animated meshes)
-GL_STREAM_DRAW	Data modified every frame (e.g., particle systems)
-GL_STATIC_READ	Data written by GPU (e.g., compute shader output)
-GL_DYNAMIC_READ	Data occasionally written by GPU, read by CPU
-GL_STREAM_READ	Data written by GPU every frame, read by CPU
-GL_STATIC_COPY	Data written by GPU, used by GPU (rare)
-GL_DYNAMIC_COPY	Data occasionally written by GPU, used by GPU
-GL_STREAM_COPY	Data written by GPU every frame, used by GPU
-```
+A 2D mesh wraps an OpenGL buffer object. Use `gl_object/1` to retrieve the
+buffer id.
 """.
 
 -export_type([
-    vertex/0,
-    vertices/0,
-    usage_hint/0
+    usage_hint/0,
+    keep_copy/0
 ]).
 -export_type([
     object/0
@@ -110,7 +67,7 @@ GL_STREAM_COPY	Data written by GPU every frame, used by GPU
 -export([
     with_vertices/1, with_vertices/2, with_vertices/3,
     destroy/1,
-    set_vertices/2, set_vertices/3, set_vertices/4,
+    set_vertices/2, set_vertices/3,
     vertex_count/1,
     usage_hint/1,
     local_vertices/1, local_vertices/2,
@@ -121,16 +78,25 @@ GL_STREAM_COPY	Data written by GPU every frame, used by GPU
     update_vertex/3
 ]).
 -export([
-    % update_from_mesh/2
+    has_local_copy/1,
+    keep_local_copy/1,
+    release_local_copy/1
 ]).
 -export([
     gl_object/1
 ]).
--export([
-    % has_local_copy/1,
-    % keep_local_copy/1,
-    % release_local_copy/1
-]).
+
+-compile({inline, [
+    with_vertices/1, with_vertices/2,
+    set_vertices/2,
+    vertex_count/1,
+    usage_hint/1,
+    local_vertices/1,
+    update_vertices/2,
+    update_vertex/3,
+    has_local_copy/1,
+    gl_object/1
+]}).
 
 % By default, the usage hint is "static".
 -define(DEFAULT_USAGE_HINT, static).
@@ -138,27 +104,14 @@ GL_STREAM_COPY	Data written by GPU every frame, used by GPU
 % By default, no local copy is kept.
 -define(DEFAULT_KEEP_COPY, no_copy).
 
-% Vertex stride in bytes.
--define(VERTEX_STRIDE, 20).
+% Vertex stride in bytes: 2 position + 4 color + 2 UV floats.
+-define(VERTEX_STRIDE, (4 * (2 + 4 + 2))).
 
 -doc """
-To be written.
-""".
--type vertex() :: {
-    X :: float(),
-    Y :: float(),
-    Color :: graphics:color(),
-    U :: float(),
-    V :: float()
-}.
+A mesh usage hint.
 
--doc """
-To be written.
-""".
--type vertices() :: [vertex()].
-
--doc """
-To be written.
+`static` is for data set once and drawn many times. `dynamic` is for data
+modified occasionally. `stream` is for data modified every frame.
 """.
 -type usage_hint() ::
     static |
@@ -167,46 +120,64 @@ To be written.
 .
 
 -doc """
-To be written.
+A mesh copy policy.
+
+`no_copy` keeps no CPU copy of the vertices. `keep_copy` keeps a local copy.
 """.
 -type keep_copy() :: no_copy | keep_copy.
 
 -doc """
 A 2D mesh object.
 
-It wraps the OpenGL buffer ID and possibly a local copy of the vertices.
+It wraps an OpenGL buffer id, the vertex count, the usage hint, and an optional
+local copy of the vertices.
 """.
 -opaque object() :: {
     ResourceId :: {mesh2, gl:buffer()},
     VertexCount :: non_neg_integer(),
     UsageHint :: usage_hint(),
-    LocalVertices :: undefined | vertices()
+    LocalVertices :: undefined | [graphics:vertex2()]
 }.
 
 -doc """
-To be written.
+A 2D mesh from a list of vertices.
 
-To be written.
+It constructs a 2D mesh from the given 2D vertices. The usage hint is `static`
+and no local copy is kept.
+
+It's equivalent to `with_vertices(Vertices, static)`.
 """.
--spec with_vertices(vertices()) -> {ok, object()}.
+-spec with_vertices([graphics:vertex2()]) -> {ok, object()} | out_of_memory.
 with_vertices(Vertices) ->
     with_vertices(Vertices, ?DEFAULT_USAGE_HINT).
 
 -doc """
-To be written.
+A 2D mesh from a list of vertices and a usage hint.
 
-To be written.
+It constructs a 2D mesh from the given 2D vertices with the given usage hint.
+No local copy is kept.
+
+It's equivalent to `with_vertices(Vertices, UsageHint, no_copy)`.
 """.
--spec with_vertices(vertices(), usage_hint()) -> {ok, object()}.
+-spec with_vertices([graphics:vertex2()], usage_hint()) ->
+    {ok, object()} | out_of_memory
+.
 with_vertices(Vertices, UsageHint) ->
     with_vertices(Vertices, UsageHint, ?DEFAULT_KEEP_COPY).
 
 -doc """
-To be written.
+A 2D mesh from a list of vertices, a usage hint, and a copy policy.
 
-To be written.
+It constructs a 2D mesh from the given 2D vertices with the given usage hint.
+When `KeepCopy` is `keep_copy`, a local copy of the vertices is kept. When it
+is `no_copy`, there is no local copy.
+
+The list may be empty. It returns `out_of_memory` when the GPU cannot allocate
+the buffer.
 """.
--spec with_vertices(vertices(), usage_hint(), keep_copy()) -> {ok, object()}.
+-spec with_vertices([graphics:vertex2()], usage_hint(), keep_copy()) ->
+    {ok, object()} | out_of_memory
+.
 with_vertices(Vertices, UsageHint, KeepCopy) ->
     UsageHintRaw = to_usage_hint_raw(UsageHint),
     Data = vertices_to_data(Vertices),
@@ -215,19 +186,20 @@ with_vertices(Vertices, UsageHint, KeepCopy) ->
         {error, out_of_memory} ->
             out_of_memory;
         {ok, ResourceId} ->
-            Mesh = case KeepCopy of
+            LocalVertices = case KeepCopy of
                 no_copy ->
-                    {ResourceId, VertexCount, UsageHint, undefined};
+                    undefined;
                 keep_copy ->
-                    {ResourceId, VertexCount, UsageHint, Vertices}
+                    Vertices
             end,
-            {ok, Mesh}
+            {ok, {ResourceId, VertexCount, UsageHint, LocalVertices}}
     end.
 
 -doc """
-To be written.
+Destroy a 2D mesh.
 
-To be written.
+It releases the GPU buffer of the 2D mesh. Using the mesh after it is destroyed
+has undefined behavior. Destroying the same mesh twice is invalid.
 """.
 -spec destroy(object()) -> ok.
 destroy({ResourceId, _VertexCount, _UsageHint, _LocalVertices}) ->
@@ -235,116 +207,100 @@ destroy({ResourceId, _VertexCount, _UsageHint, _LocalVertices}) ->
     ok.
 
 -doc """
-Set the vertices of the mesh.
+Set the vertices of a 2D mesh.
 
-It sets the vertices foobar.
+It replaces the vertices of the 2D mesh. The usage hint and the copy policy of
+the mesh are preserved. The OpenGL buffer id is unchanged.
 
-It's equivalent to `set_vertices(Mesh, Vertices, static)`.
-
-See `set_vertices/3` for more details.
+It's equivalent to `set_vertices(Mesh, Vertices, usage_hint(Mesh))`.
 """.
--spec set_vertices(object(), vertices()) -> {ok, object()} | out_of_memory.
-set_vertices(Mesh, Vertices) ->
-    set_vertices(Mesh, Vertices, ?DEFAULT_USAGE_HINT).
-
--doc """
-Set the vertices of the mesh.
-
-It sets the vertices.
-
-It's equivalent to `set_vertices(Mesh, Vertices, UsageHint, no_copy)`.
-
-See `set_vertices/3` for more details.
-""".
--spec set_vertices(object(), vertices(), usage_hint()) ->
+-spec set_vertices(object(), [graphics:vertex2()]) ->
     {ok, object()} | out_of_memory
 .
-set_vertices(Mesh, Vertices, UsageHint) ->
-    set_vertices(Mesh, Vertices, UsageHint, ?DEFAULT_KEEP_COPY).
+set_vertices(Mesh, Vertices) ->
+    set_vertices(Mesh, Vertices, usage_hint(Mesh)).
 
 -doc """
-Set the vertices of the mesh.
+Set the vertices of a 2D mesh with a usage hint.
 
-It sets the vertices foobar.
+It replaces the vertices of the 2D mesh and sets the usage hint. The copy
+policy of the mesh is preserved. The OpenGL buffer id is unchanged.
+
+The list may be empty. It returns `out_of_memory` when the GPU cannot allocate
+the new data store.
 """.
--spec set_vertices(object(), vertices(), usage_hint(), keep_copy()) ->
+-spec set_vertices(object(), [graphics:vertex2()], usage_hint()) ->
     {ok, object()} | out_of_memory
 .
 set_vertices(
-    {ResourceId, _VertexCount, _UsageHint, _LocalVertices},
+    {ResourceId, _VertexCount, _UsageHint, LocalVertices},
     Vertices,
-    UsageHint,
-    KeepCopy
+    UsageHint
 ) ->
     UsageHintRaw = to_usage_hint_raw(UsageHint),
     Data = vertices_to_data(Vertices),
     VertexCount = length(Vertices),
-
     {mesh2, Buffer} = ResourceId,
     case set_mesh_data(Buffer, Data, UsageHintRaw) of
         ok ->
-            NewMesh = case KeepCopy of
-                no_copy ->
-                    {ResourceId, VertexCount, UsageHint, undefined};
-                keep_copy ->
-                    {ResourceId, VertexCount, UsageHint, Vertices}
+            NewLocalVertices = case LocalVertices of
+                undefined ->
+                    undefined;
+                _ ->
+                    Vertices
             end,
-            {ok, NewMesh};
+            {ok, {ResourceId, VertexCount, UsageHint, NewLocalVertices}};
         out_of_memory ->
             out_of_memory
     end.
 
 -doc """
-The number of vertices in the mesh.
+The number of vertices of a 2D mesh.
 
-It returns the number of vertices that are currently set in the mesh,
-as set by `set_vertices/2`.
+It returns the number of vertices currently stored in the 2D mesh.
 """.
 -spec vertex_count(object()) -> non_neg_integer().
 vertex_count({_ResourceId, VertexCount, _UsageHint, _LocalVertices}) ->
     VertexCount.
 
 -doc """
-The usage hint of the mesh.
+The usage hint of a 2D mesh.
 
-To be written.
-as set by `set_vertices/2`.
+It returns the usage hint last set when constructing or setting the vertices
+of the 2D mesh.
 """.
 -spec usage_hint(object()) -> usage_hint().
 usage_hint({_ResourceId, _VertexCount, UsageHint, _LocalVertices}) ->
     UsageHint.
 
 -doc """
-The locally cached vertices of the mesh.
+The locally cached vertices of a 2D mesh.
 
-It returns the local copy of the vertices that are currently set in the mesh,
-if a copy was with the set`
+It returns the local copy of the vertices when a copy is kept. It returns
+`undefined` when no local copy is kept. An empty mesh with a local copy
+returns `[]`.
 
-If no local vertex data is cached, it returns `undefined`.
-
-Use `local_vertices/2` to only retrieve a subset of the vertices using the
-slice notation.
-
-It returns `undefined` if no local copy is kept.
-By default, no local copy is kept
+Use `local_vertices/2` to retrieve a slice of the local copy.
 """.
--spec local_vertices(object()) -> undefined | vertices().
+-spec local_vertices(object()) -> undefined | [graphics:vertex2()].
 local_vertices({_ResourceId, _VertexCount, _UsageHint, undefined}) ->
     undefined;
 local_vertices({_ResourceId, _VertexCount, _UsageHint, LocalVertices}) ->
     LocalVertices.
 
 -doc """
-A slice of the locally cached vertices of the mesh.
+A slice of the locally cached vertices of a 2D mesh.
 
-It returns the local copy of the vertices that are currently set in the mesh,
-if a copy was with the set`
+It returns a slice of the local copy using slice range notation. It returns
+`undefined` when no local copy is kept, and `no_range` when the range is empty.
 
-It returns `undefined` if no local copy is kept.
-By default, no local copy is kept
+```erlang
+{ok, Mesh} = mesh2:with_vertices(Vertices, static, keep_copy),
+{2, [Second]} = mesh2:local_vertices(Mesh, {1, -1}).
+```
 """.
 -spec local_vertices(object(), slice:range()) ->
-    undefined | no_range | {slice:offset(), vertices()}
+    undefined | no_range | {slice:offset(), [graphics:vertex2()]}
 .
 local_vertices({_ResourceId, _VertexCount, _UsageHint, undefined}, _Range) ->
     undefined;
@@ -358,11 +314,12 @@ local_vertices({_ResourceId, VertexCount, _UsageHint, LocalVertices}, Range) ->
     end.
 
 -doc """
-To be written.
+The GPU vertices of a 2D mesh.
 
-To be written.
+It reads the vertices from GPU memory. This is more expensive than
+`local_vertices/1`. An empty mesh returns `[]`.
 """.
--spec remote_vertices(object()) -> vertices().
+-spec remote_vertices(object()) -> [graphics:vertex2()].
 remote_vertices({_ResourceId, 0, _UsageHint, _LocalVertices}) ->
     [];
 remote_vertices({ResourceId, VertexCount, _UsageHint, _LocalVertices}) ->
@@ -371,12 +328,14 @@ remote_vertices({ResourceId, VertexCount, _UsageHint, _LocalVertices}) ->
     data_to_vertices(Data).
 
 -doc """
-To be written.
+A slice of the GPU vertices of a 2D mesh.
 
-To be written.
+It reads a slice of the vertices from GPU memory using slice range notation.
+It returns `no_range` when the range is empty.
 """.
 -spec remote_vertices(object(), slice:range()) ->
-    no_range | {slice:offset(), vertices()}.
+    no_range | {slice:offset(), [graphics:vertex2()]}
+.
 remote_vertices({ResourceId, VertexCount, _UsageHint, _LocalVertices}, Range) ->
     case slice:range(VertexCount, Range) of
         no_range ->
@@ -385,7 +344,7 @@ remote_vertices({ResourceId, VertexCount, _UsageHint, _LocalVertices}, Range) ->
             {mesh2, Buffer} = ResourceId,
             Data = mesh_data(
                 Buffer,
-                (Offset-1) * ?VERTEX_STRIDE,
+                (Offset - 1) * ?VERTEX_STRIDE,
                 Length * ?VERTEX_STRIDE
             ),
             Vertices = data_to_vertices(Data),
@@ -393,27 +352,23 @@ remote_vertices({ResourceId, VertexCount, _UsageHint, _LocalVertices}, Range) ->
     end.
 
 -doc """
-A vertex of the mesh.
+A locally cached vertex of a 2D mesh.
 
-It returns a specific vertex of the mesh, identified by a slice index.
+It returns a vertex of the local copy, identified by a slice index. The index
+is 0-based and may be negative.
 
 ```erlang
-Vertices = [
-    {0.0, 0.0, ?COLOR_RED, 0.0, 0.0},
-    {1.0, 0.0, ?COLOR_GREEN, 1.0, 0.0},
-    {0.0, 0.0, ?COLOR_BLUE, 0.0, 0.0}
-].
-Mesh = mesh:with_vertices(Vertices, with_copy).
-
-{0.0, 0.0, ?COLOR_RED, 0.0, 0.0} = mesh:local_vertices(Mesh, 0).
-{0.0, 0.0, ?COLOR_BLUE, 0.0, 0.0} = mesh:local_vertices(Mesh, -1).
+{ok, Mesh} = mesh2:with_vertices(Vertices, static, keep_copy),
+{1, {{0.0, 0.0}, ?COLOR_RED, 0.0, 0.0}} = mesh2:local_vertex(Mesh, 0),
+{3, {{0.0, 1.0}, ?COLOR_BLUE, 0.0, 1.0}} = mesh2:local_vertex(Mesh, -1).
 ```
 
-It returns `undefined` if no local copy is kept. If the index is out of range,
-it returns `out_of_range`.
+It returns `undefined` when no local copy is kept, and `out_of_range` when the
+index is out of range. The offset in the result is 1-based.
 """.
 -spec local_vertex(object(), slice:index()) ->
-    undefined | out_of_range | {slice:offset(), vertex()}.
+    undefined | out_of_range | {slice:offset(), graphics:vertex2()}
+.
 local_vertex({_ResourceId, _VertexCount, _UsageHint, undefined}, _Index) ->
     undefined;
 local_vertex({_ResourceId, VertexCount, _UsageHint, LocalVertices}, Index) ->
@@ -426,12 +381,15 @@ local_vertex({_ResourceId, VertexCount, _UsageHint, LocalVertices}, Index) ->
     end.
 
 -doc """
-To be written.
+A GPU vertex of a 2D mesh.
 
-To be written.
+It reads a vertex from GPU memory, identified by a slice index. The index is
+0-based and may be negative. It returns `out_of_range` when the index is out
+of range. The offset in the result is 1-based.
 """.
 -spec remote_vertex(object(), slice:index()) ->
-    out_of_range | {slice:offset(), vertex()}.
+    out_of_range | {slice:offset(), graphics:vertex2()}
+.
 remote_vertex(
     {ResourceId, VertexCount, _UsageHint, _LocalVertices},
     Index
@@ -443,7 +401,7 @@ remote_vertex(
             {mesh2, Buffer} = ResourceId,
             Data = mesh_data(
                 Buffer,
-                (Offset-1) * ?VERTEX_STRIDE,
+                (Offset - 1) * ?VERTEX_STRIDE,
                 ?VERTEX_STRIDE
             ),
             [Vertex] = data_to_vertices(Data),
@@ -451,67 +409,122 @@ remote_vertex(
     end.
 
 -doc """
-To be written.
+Update the vertices of a 2D mesh from the start.
 
-To be written.
+It writes the given vertices starting at the first vertex. The mesh size is
+unchanged. It returns `out_of_range` when the list is longer than the mesh.
+
+It's equivalent to `update_vertices(Mesh, Vertices, 0)`.
 """.
--spec update_vertices(object(), vertices()) -> {ok, object()}.
-update_vertices(_Mesh, _Vertices) ->
-    update_vertices(_Mesh, _Vertices, 1).
+-spec update_vertices(object(), [graphics:vertex2()]) ->
+    {ok, object()} | out_of_range
+.
+update_vertices(Mesh, Vertices) ->
+    update_vertices(Mesh, Vertices, 0).
 
 -doc """
-To be written.
+Update the vertices of a 2D mesh from an index.
 
-To be written.
+It writes the given vertices starting at the given slice index. The index is
+0-based and may be negative. The mesh size is unchanged. It returns
+`out_of_range` when the index is invalid or the write would not fit.
+
+A zero-length list is a no-op and returns `{ok, Mesh}`.
 """.
--spec update_vertices(object(), vertices(), slice:offset()) ->
-    {ok, object()} | out_of_range.
+-spec update_vertices(object(), [graphics:vertex2()], slice:index()) ->
+    {ok, object()} | out_of_range
+.
+update_vertices(Mesh, [], _Index) ->
+    {ok, Mesh};
 update_vertices(
     {ResourceId, VertexCount, UsageHint, LocalVertices},
     Vertices,
-    Offset
+    Index
 ) ->
-    case (Offset-1) + length(Vertices) > VertexCount of
-        true ->
+    case slice:index(VertexCount, Index) of
+        out_of_range ->
             out_of_range;
-        false ->
+        Offset when Offset - 1 + length(Vertices) > VertexCount ->
+            out_of_range;
+        Offset ->
             Data = vertices_to_data(Vertices),
             {mesh2, Buffer} = ResourceId,
             ok = update_mesh_data(
                 Buffer,
-                (Offset-1) * ?VERTEX_STRIDE,
+                (Offset - 1) * ?VERTEX_STRIDE,
                 Data
             ),
-            NewMesh = case LocalVertices of
+            NewLocalVertices = case LocalVertices of
                 undefined ->
-                    {ResourceId, VertexCount, UsageHint, undefined};
+                    undefined;
                 _ when length(Vertices) =:= VertexCount ->
-                    % If the number of vertices is the same, we can just
-                    % replace the local vertices.
-                    {ResourceId, VertexCount, UsageHint, Vertices};
+                    Vertices;
                 _ ->
-                    {LeftVertices, _} = lists:split((Offset-1), LocalVertices),
-                    {_, RightVertices} = lists:split((Offset-1) + length(Vertices), LocalVertices),
-                    NewLocalVertices =
-                        LeftVertices ++ Vertices ++ RightVertices,
-                    {ResourceId, VertexCount, UsageHint, NewLocalVertices}
+                    {LeftVertices, _} = lists:split(Offset - 1, LocalVertices),
+                    {_, RightVertices} = lists:split(
+                        Offset - 1 + length(Vertices),
+                        LocalVertices
+                    ),
+                    LeftVertices ++ Vertices ++ RightVertices
             end,
-            {ok, NewMesh}
+            {ok, {ResourceId, VertexCount, UsageHint, NewLocalVertices}}
     end.
 
 -doc """
-To be written.
+Update a vertex of a 2D mesh.
 
-To be written.
+It writes the given vertex at the given slice index. The index is 0-based and
+may be negative.
+
+It's equivalent to `update_vertices(Mesh, [Vertex], Index)`.
 """.
--spec update_vertex(object(), vertex(), slice:offset()) -> ok.
-update_vertex(Mesh, Vertex, Offset) ->
-    update_vertices(Mesh, [Vertex], Offset).
+-spec update_vertex(object(), graphics:vertex2(), slice:index()) ->
+    {ok, object()} | out_of_range
+.
+update_vertex(Mesh, Vertex, Index) ->
+    update_vertices(Mesh, [Vertex], Index).
 
 -doc """
-To be written.
+Check whether a 2D mesh keeps a local copy.
 
-To be written.
+It returns `true` when a local copy of the vertices is kept, otherwise
+`false`.
+""".
+-spec has_local_copy(object()) -> boolean().
+has_local_copy({_ResourceId, _VertexCount, _UsageHint, undefined}) ->
+    false;
+has_local_copy({_ResourceId, _VertexCount, _UsageHint, _LocalVertices}) ->
+    true.
+
+-doc """
+Keep a local copy of a 2D mesh.
+
+It reads the vertices from GPU memory and keeps them as a local copy. It
+returns `already_local_copy` when a local copy is already kept.
+""".
+-spec keep_local_copy(object()) -> {ok, object()} | already_local_copy.
+keep_local_copy({_ResourceId, _VertexCount, _UsageHint, undefined} = Mesh) ->
+    Vertices = remote_vertices(Mesh),
+    {ok, erlang:setelement(4, Mesh, Vertices)};
+keep_local_copy({_ResourceId, _VertexCount, _UsageHint, _LocalVertices}) ->
+    already_local_copy.
+
+-doc """
+Release the local copy of a 2D mesh.
+
+It drops the local copy of the vertices. The GPU buffer is unchanged. It
+returns `no_local_copy` when there is no local copy.
+""".
+-spec release_local_copy(object()) -> {ok, object()} | no_local_copy.
+release_local_copy({_ResourceId, _VertexCount, _UsageHint, undefined}) ->
+    no_local_copy;
+release_local_copy(Mesh) ->
+    {ok, erlang:setelement(4, Mesh, undefined)}.
+
+-doc """
+The OpenGL buffer of a 2D mesh.
+
+It returns the OpenGL buffer id wrapped by the 2D mesh.
 """.
 -spec gl_object(object()) -> gl:buffer().
 gl_object({{mesh2, Buffer}, _VertexCount, _UsageHint, _LocalVertices}) ->
@@ -525,10 +538,9 @@ to_usage_hint_raw(UsageHint) ->
     end.
 
 vertices_to_data(Vertices) ->
-    lists:foldl(
-        fun({{X, Y}, {R, G, B, A}, U, V}, Acc) ->
+    iolist_to_binary(lists:map(
+        fun({{X, Y}, {R, G, B, A}, U, V}) ->
             <<
-                Acc/binary,
                 X:32/float-little,
                 Y:32/float-little,
                 R:32/float-little,
@@ -539,9 +551,8 @@ vertices_to_data(Vertices) ->
                 V:32/float-little
             >>
         end,
-        <<>>,
         Vertices
-    ).
+    )).
 
 data_to_vertices(Data) ->
     data_to_vertices(Data, []).
@@ -577,7 +588,7 @@ acquire_mesh(Data, UsageHint) ->
                 ok = gl:bind_buffer(array_buffer, none),
                 {ok, {mesh2, Buffer}, ReleaseFun};
             {ok, out_of_memory} ->
-                % XXX: unit test this behavior
+                ok = gl:bind_buffer(array_buffer, none),
                 ok = gl:delete_buffers([Buffer]),
                 {error, out_of_memory}
         end
@@ -593,9 +604,10 @@ set_mesh_data(Buffer, Data, UsageHint) ->
         ok = gl:buffer_data(array_buffer, Data, UsageHint),
         case gl:get_error() of
             {ok, no_error} ->
+                ok = gl:bind_buffer(array_buffer, none),
                 ok;
             {ok, out_of_memory} ->
-                % XXX: unit test this behavior
+                ok = gl:bind_buffer(array_buffer, none),
                 out_of_memory
         end
     end).
