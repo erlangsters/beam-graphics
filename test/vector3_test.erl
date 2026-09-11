@@ -11,200 +11,177 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("beam_graphics/include/graphics.hrl").
 
+-define(EPS, 1.0e-6).
+
 vector3_test() ->
     V = {1.0, 2.0, 3.0},
     1.0 = vector3:x(V),
     2.0 = vector3:y(V),
     3.0 = vector3:z(V),
-
     ok.
 
 vector3_zero_test() ->
     {0.0, 0.0, 0.0} = vector3:zero(),
     {0.0, 0.0, 0.0} = ?VECTOR3_ZERO,
-
     ok.
 
 vector3_is_zero_test() ->
     true = vector3:is_zero(vector3:zero()),
-    true = vector3:is_zero(?VECTOR3_ZERO),
-
-    false = vector3:is_zero({1.0, 0.0, 0.0}),
-    false = vector3:is_zero({0.0, 1.0, 0.0}),
-    false = vector3:is_zero({0.0, 0.0, 1.0}),
-    false = vector3:is_zero({1.0, 1.0, 1.0}),
-
-    true = vector3:is_zero({+0.0, +0.0, +0.0}),
-    true = vector3:is_zero({-0.0, -0.0, -0.0}),
     true = vector3:is_zero({+0.0, -0.0, +0.0}),
-    true = vector3:is_zero({-0.0, +0.0, -0.0}),
-    true = vector3:is_zero({+0.0, +0.0, -0.0}),
-    true = vector3:is_zero({-0.0, -0.0, +0.0}),
-    true = vector3:is_zero({+0.0, -0.0, -0.0}),
-    true = vector3:is_zero({-0.0, +0.0, +0.0}),
-
+    false = vector3:is_zero({1.0, 0.0, 0.0}),
+    false = vector3:is_zero({0.0, 0.0, 1.0}),
     ok.
 
-vector3_unit_test() ->
-    % XXX
-
+vector3_is_unit_test() ->
+    true = vector3:is_unit({1.0, 0.0, 0.0}),
+    true = vector3:is_unit(vector3:normalize({3.0, 4.0, 5.0})),
+    false = vector3:is_unit({0.0, 0.0, 0.0}),
+    false = vector3:is_unit({2.0, 0.0, 0.0}),
     ok.
 
 vector3_length_test() ->
-    V = {3.0, 4.0, 5.0},
-    7.0710678118654755 = vector3:length(V),
+    7.0710678118654755 = vector3:length({3.0, 4.0, 5.0}),
+    ok.
 
+vector3_length_squared_test() ->
+    50.0 = vector3:length_squared({3.0, 4.0, 5.0}),
     ok.
 
 vector3_normalize_test() ->
-    V = {3.0, 4.0, 5.0},
-    {0.4242640687119285, 0.565685424949238, 0.7071067811865475} = vector3:normalize(V),
-
+    {0.4242640687119285, 0.565685424949238, 0.7071067811865475} =
+        vector3:normalize({3.0, 4.0, 5.0}),
     ok.
 
 vector3_dot_product_test() ->
-    V1 = {1.0, 2.0, 3.0},
-    V2 = {4.0, 5.0, 6.0},
-    32.0 = vector3:dot_product(V1, V2),
-
+    32.0 = vector3:dot_product({1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}),
     ok.
 
 vector3_cross_product_test() ->
-    V1 = {1.0, 2.0, 3.0},
-    V2 = {4.0, 5.0, 6.0},
-    {-3.0, 6.0, -3.0} = vector3:cross_product(V1, V2),
-
+    {-3.0, 6.0, -3.0} = vector3:cross_product({1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}),
+    {0.0, 0.0, 1.0} = vector3:cross_product({1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}),
     ok.
 
 vector3_distance_test() ->
-    % XXX
+    5.0 = vector3:distance({0.0, 0.0, 0.0}, {0.0, 3.0, 4.0}),
+    ok.
 
+vector3_distance_squared_test() ->
+    25.0 = vector3:distance_squared({0.0, 0.0, 0.0}, {0.0, 3.0, 4.0}),
     ok.
 
 vector3_direction_test() ->
-    % XXX
-
+    {0.0, 0.6, 0.8} = vector3:direction({0.0, 0.0, 0.0}, {0.0, 3.0, 4.0}),
     ok.
 
 vector3_angle_test() ->
-    % XXX
-
+    true = erlang:abs(vector3:angle({1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}) - ?ANGLE_90) =< ?EPS,
+    true = erlang:abs(vector3:angle({1.0, 0.0, 0.0}, {-1.0, 0.0, 0.0}) - ?ANGLE_180) =< ?EPS,
+    true = erlang:abs(
+        vector3:angle({1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}) -
+        vector3:angle({0.0, 1.0, 0.0}, {1.0, 0.0, 0.0})
+    ) =< ?EPS,
+    true = erlang:abs(vector3:angle({1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}) - ?ANGLE_90) =< ?EPS,
+    true = erlang:abs(vector3:angle({1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, -1.0}) + ?ANGLE_90) =< ?EPS,
     ok.
 
 vector3_project_test() ->
-    % XXX
-
+    {3.0, 0.0, 0.0} = vector3:project({3.0, 4.0, 5.0}, {1.0, 0.0, 0.0}),
+    {0.0, 0.0, 0.0} = vector3:project({1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}),
     ok.
 
 vector3_rotate_test() ->
-    % XXX
-
+    true = vector3:is_equal_to(
+        vector3:rotate({1.0, 0.0, 0.0}, ?ANGLE_90, {0.0, 0.0, 1.0}),
+        {0.0, 1.0, 0.0},
+        ?EPS
+    ),
+    true = vector3:is_equal_to(
+        vector3:rotate({0.0, 1.0, 0.0}, ?ANGLE_90, {1.0, 0.0, 0.0}),
+        {0.0, 0.0, 1.0},
+        ?EPS
+    ),
     ok.
 
 vector3_reflect_test() ->
-    % XXX
-
+    {1.0, 1.0, 0.0} = vector3:reflect({1.0, -1.0, 0.0}, {0.0, 1.0, 0.0}),
     ok.
 
 vector3_clamp_length_test() ->
-    % XXX
-
+    {0.0, 3.0, 4.0} = vector3:clamp_length({0.0, 3.0, 4.0}, 0.0, 10.0),
+    true = vector3:is_equal_to(
+        vector3:clamp_length({0.0, 3.0, 4.0}, 0.0, 1.0),
+        {0.0, 0.6, 0.8},
+        ?EPS
+    ),
+    {0.0, 6.0, 8.0} = vector3:clamp_length({0.0, 3.0, 4.0}, 10.0, 20.0),
+    {0.0, 0.0, 0.0} = vector3:clamp_length({0.0, 0.0, 0.0}, 1.0, 2.0),
     ok.
 
 vector3_add_test() ->
-    V1 = {1.0, 2.0, 3.0},
-    V2 = {4.0, 5.0, 6.0},
-    {5.0, 7.0, 9.0} = vector3:add(V1, V2),
-
+    {5.0, 7.0, 9.0} = vector3:add({1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}),
     ok.
 
 vector3_subtract_test() ->
-    V1 = {1.0, 2.0, 3.0},
-    V2 = {4.0, 5.0, 6.0},
-    {-3.0, -3.0, -3.0} = vector3:subtract(V1, V2),
-
+    {-3.0, -3.0, -3.0} = vector3:subtract({1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}),
     ok.
 
 vector3_multiply_test() ->
-    V = {1.0, 2.0, 3.0},
-    {2.0, 4.0, 6.0} = vector3:multiply(V, 2.0),
-
+    {2.0, 4.0, 6.0} = vector3:multiply({1.0, 2.0, 3.0}, 2.0),
     ok.
 
 vector3_divide_test() ->
-    % XXX
-
+    {0.5, 1.0, 1.5} = vector3:divide({1.0, 2.0, 3.0}, 2.0),
     ok.
 
 vector3_negate_test() ->
-    % XXX
-
+    {-1.0, 2.0, -3.0} = vector3:negate({1.0, -2.0, 3.0}),
     ok.
 
 vector3_is_equal_to_test() ->
-    % XXX
-
+    true = vector3:is_equal_to({1.0, 2.0, 3.0}, {1.0, 2.0, 3.0}),
+    true = vector3:is_equal_to({+0.0, -0.0, +0.0}, {-0.0, +0.0, -0.0}),
+    false = vector3:is_equal_to({1.0, 2.0, 3.0}, {1.0, 2.1, 3.0}),
+    true = vector3:is_equal_to({1.0, 2.0, 3.0}, {1.0, 2.0000001, 3.0}, ?EPS),
     ok.
 
 vector3_to_vector2_test() ->
-    V = {1.0, 2.0, 3.0},
-    {1.0, 2.0} = vector3:to_vector2(V),
-
+    {1.0, 2.0} = vector3:to_vector2({1.0, 2.0, 3.0}),
     ok.
 
 vector3_min_test() ->
-    V1 = {1.0, 5.0, 3.0},
-    V2 = {4.0, 2.0, 6.0},
-    {1.0, 2.0, 3.0} = vector3:min(V1, V2),
-
+    {1.0, 2.0, 3.0} = vector3:min({1.0, 5.0, 3.0}, {4.0, 2.0, 6.0}),
     ok.
 
 vector3_max_test() ->
-    V1 = {1.0, 5.0, 3.0},
-    V2 = {4.0, 2.0, 6.0},
-    {4.0, 5.0, 6.0} = vector3:max(V1, V2),
-
+    {4.0, 5.0, 6.0} = vector3:max({1.0, 5.0, 3.0}, {4.0, 2.0, 6.0}),
     ok.
 
 vector3_abs_test() ->
     {1.0, 2.0, 3.0} = vector3:abs({-1.0, 2.0, 3.0}),
-    {1.0, 2.0, 3.0} = vector3:abs({1.0, -2.0, 3.0}),
-    {1.0, 2.0, 3.0} = vector3:abs({1.0, 2.0, -3.0}),
-
+    {1.0, 2.0, 3.0} = vector3:abs({1.0, -2.0, -3.0}),
     ok.
 
 vector3_floor_test() ->
     {2.0, 2.0, 2.0} = vector3:floor({2.4, 2.6, 2.5}),
-
     ok.
 
 vector3_ceil_test() ->
     {3.0, 3.0, 3.0} = vector3:ceil({2.4, 2.6, 2.5}),
-
     ok.
 
 vector3_round_test() ->
     {2.0, 3.0, 2.0} = vector3:round({2.4, 2.6, 2.4}),
     {2.0, 3.0, 3.0} = vector3:round({2.4, 2.6, 2.6}),
-
-    ok.
-
-vector3_to_angle_test() ->
-    % XXX
-
-    ok.
-
-vector3_from_angle_test() ->
-    % XXX
-
     ok.
 
 vector3_lerp_test() ->
-    % XXX
-
+    {1.0, 2.0, 3.0} = vector3:lerp({1.0, 2.0, 3.0}, {5.0, 6.0, 7.0}, 0.0),
+    {5.0, 6.0, 7.0} = vector3:lerp({1.0, 2.0, 3.0}, {5.0, 6.0, 7.0}, 1.0),
+    {3.0, 4.0, 5.0} = vector3:lerp({1.0, 2.0, 3.0}, {5.0, 6.0, 7.0}, 0.5),
     ok.
 
 vector3_smooth_lerp_test() ->
-    % XXX
-
+    {1.0, 2.0, 3.0} = vector3:smooth_lerp({1.0, 2.0, 3.0}, {5.0, 6.0, 7.0}, 0.0),
+    {5.0, 6.0, 7.0} = vector3:smooth_lerp({1.0, 2.0, 3.0}, {5.0, 6.0, 7.0}, 1.0),
+    {3.0, 4.0, 5.0} = vector3:smooth_lerp({1.0, 2.0, 3.0}, {5.0, 6.0, 7.0}, 0.5),
     ok.

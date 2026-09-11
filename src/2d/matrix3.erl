@@ -12,72 +12,52 @@
 3x3 Matrix
 
 A 3x3 matrix is a grid of numbers that is typically used to represent 2D
-transformations in the Euclidean plane. Because it can also be seen as a 2x3
-matrix by ignoring the third row and assuming its value is [0, 0, 1]
-(also called the homogeneous coordinates), it defines operations with 2D
-vectors.
+transformations in the Euclidean plane.
 
 > While 3x3 matrices are powerful, manually constructing them for
 > transformations can be error-prone. For common 2D operations
-> (e.g., translation, rotation), prefer the transform2 API, which wraps a 3x3
-> matrix in a more ergonomic interface.
+> (e.g., translation, rotation), prefer the `transform2` API, which wraps a
+> 3x3 matrix in a more ergonomic interface.
 
-The matrix is stored as a flat tuple of 9 floats in column-major order (top-to-bottom, left-to-right):
-
-The data structure of a 3x3 matrix simply is a flat tuple of 9 floats win
+The data structure of a 3x3 matrix simply is a flat tuple of 9 floats in
 column-major order (top-to-bottom, left-to-right). Therefore, 3x3 matrices can
 naturally be created with the tuple syntax.
 
-```
+```erlang
 M = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0}.
 ```
 
-> If snippets of code showcasing matrices never split their elements over
-> multiple lines (for readability), this is to avoid confusion with the usual
-> mathematical notation which uses the row-major layout.
+To access the elements of a 3x3 matrix, use the `element/3` function with a
+1-based row and column. Use `row/2` and `column/2` to extract a whole row or
+column, and `from_rows/3` or `from_columns/3` to build a matrix from vectors.
 
-To access the elements of a 3x3 matrix, use either the `element/2` or
-`element/3` function.
-
-```
-1.0 = matrix3:elem(M, 1).
-4.0 = matrix3:elem(M, 4).
+```erlang
 1.0 = matrix3:element(M, 1, 1).
 3.0 = matrix3:element(M, 3, 1).
 7.0 = matrix3:element(M, 1, 3).
 ```
+
 A 3x3 matrix where all the elements are set to zero is called a zero matrix,
-which can be conveniently created with the zero/0 function. Also a zero 3x3
-matrix with a 1.0 in the bottom right corner is called an identity matrix,
-which can be conveniently created with the identity/0 function.
-```
-{
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0
-} = matrix3:zero().
-{
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0
-} = matrix3:identity().
-```
-Constants are also defined to represent the zero and identity 3x3 matrix.
-You must include the `beam_graphics.hrl` header to use them.
-```
-{
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0
-} = ?MATRIX_3X3_ZERO.
-{
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0
-} = ?MATRIX_3X3_IDENTITY.
+which can be conveniently created with the `zero/0` function. A 3x3 matrix with
+1.0 on the diagonal and 0.0 elsewhere is called an identity matrix, which can
+be conveniently created with the `identity/0` function.
+
+```erlang
+{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0} = matrix3:zero().
+{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0} = matrix3:identity().
 ```
 
-The common mathematical operations are also implemented.
+Macros are also defined to represent the zero and identity 3x3 matrices. (The
+`graphics.hrl` header must be included.)
+
+```erlang
+{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0} = ?MATRIX3_ZERO.
+{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0} = ?MATRIX3_IDENTITY.
+```
+
+The common mathematical operations are also implemented. `multiply/2` is the
+matrix product. `scale/2` multiplies every element by a scalar. To transform a
+2D point, use `multiply_vector/2`.
 """.
 
 -export([
@@ -127,7 +107,8 @@ The common mathematical operations are also implemented.
     smooth_lerp/3
 ]).
 
--type vector3() :: graphics:vector3().
+-define(EPSILON, 1.0e-6).
+-define(SINGULAR_EPSILON, 1.0e-10).
 
 -doc """
 The zero 3x3 matrix.
@@ -149,23 +130,22 @@ zero() ->
     }.
 
 -doc """
-To be written.
+Check whether a 3x3 matrix is zero.
 
-To be written.
+It returns `true` when every element is zero. The values `+0.0` and `-0.0` are
+treated as equal.
 """.
 -spec is_zero(graphics:matrix3()) -> boolean().
-is_zero(_Matrix) ->
-    % XXX
-
-    ok.
+is_zero(Matrix) ->
+    is_equal_to(Matrix, zero()).
 
 -doc """
 The identity 3x3 matrix.
 
-It constructs a zero 3x3 matrix.
+It constructs a 3x3 identity matrix.
 
 ```erlang
-{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0} = matrix3:zero().
+{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0} = matrix3:identity().
 ```
 
 Note that the `?MATRIX3_IDENTITY` macro can be used instead.
@@ -179,22 +159,22 @@ identity() ->
     }.
 
 -doc """
-To be written.
+Check whether a 3x3 matrix is the identity.
 
-To be written.
+It returns `true` when the matrix equals the identity matrix within 1.0e-6.
 """.
 -spec is_identity(graphics:matrix3()) -> boolean().
-is_identity(_Matrix) ->
-    % XXX
-
-    ok.
+is_identity(Matrix) ->
+    is_equal_to(Matrix, identity(), ?EPSILON).
 
 -doc """
-To be written.
+Create a 3x3 matrix from rows.
 
-To be written.
+It constructs a 3x3 matrix from three row vectors. The first argument is the
+top row.
 """.
--spec from_rows(vector3(), vector3(), vector3()) -> graphics:matrix3().
+-spec from_rows(graphics:vector3(), graphics:vector3(), graphics:vector3()) ->
+    graphics:matrix3().
 from_rows(Row1, Row2, Row3) ->
     {
         element(1, Row1), element(1, Row2), element(1, Row3),
@@ -203,11 +183,13 @@ from_rows(Row1, Row2, Row3) ->
     }.
 
 -doc """
-To be written.
+Create a 3x3 matrix from columns.
 
-To be written.
+It constructs a 3x3 matrix from three column vectors. The first argument is the
+left column.
 """.
--spec from_columns(vector3(), vector3(), vector3()) -> graphics:matrix3().
+-spec from_columns(graphics:vector3(), graphics:vector3(), graphics:vector3()) ->
+    graphics:matrix3().
 from_columns(Column1, Column2, Column3) ->
     {
         element(1, Column1), element(2, Column1), element(3, Column1),
@@ -216,11 +198,11 @@ from_columns(Column1, Column2, Column3) ->
     }.
 
 -doc """
-To be written.
+An element of a 3x3 matrix.
 
-To be written.
+It returns the element at the given 1-based row and column.
 """.
--spec element(graphics:matrix3(), integer(), integer()) -> float().
+-spec element(graphics:matrix3(), 1..3, 1..3) -> float().
 element(Matrix, Row, Column) ->
     case {Row, Column} of
         {1, 1} -> element(1, Matrix);
@@ -235,11 +217,11 @@ element(Matrix, Row, Column) ->
     end.
 
 -doc """
-To be written.
+A row of a 3x3 matrix.
 
-To be written.
+It returns the row at the given 1-based index as a 3D vector.
 """.
--spec row(graphics:matrix3(), Index :: 1..3) -> graphics:vector3().
+-spec row(graphics:matrix3(), 1..3) -> graphics:vector3().
 row(Matrix, Index) ->
     case Index of
         1 -> {element(1, Matrix), element(4, Matrix), element(7, Matrix)};
@@ -248,11 +230,11 @@ row(Matrix, Index) ->
     end.
 
 -doc """
-To be written.
+A column of a 3x3 matrix.
 
-To be written.
+It returns the column at the given 1-based index as a 3D vector.
 """.
--spec column(graphics:matrix3(), Index :: 1..3) -> graphics:vector3().
+-spec column(graphics:matrix3(), 1..3) -> graphics:vector3().
 column(Matrix, Index) ->
     case Index of
         1 -> {element(1, Matrix), element(2, Matrix), element(3, Matrix)};
@@ -261,9 +243,10 @@ column(Matrix, Index) ->
     end.
 
 -doc """
-To be written.
+The rows of a 3x3 matrix.
 
-To be written.
+It returns the three row vectors of the 3x3 matrix as a tuple, from top to
+bottom.
 """.
 -spec rows(graphics:matrix3()) ->
     {graphics:vector3(), graphics:vector3(), graphics:vector3()}.
@@ -271,9 +254,10 @@ rows(Matrix) ->
     {row(Matrix, 1), row(Matrix, 2), row(Matrix, 3)}.
 
 -doc """
-To be written.
+The columns of a 3x3 matrix.
 
-To be written.
+It returns the three column vectors of the 3x3 matrix as a tuple, from left to
+right.
 """.
 -spec columns(graphics:matrix3()) ->
     {graphics:vector3(), graphics:vector3(), graphics:vector3()}.
@@ -281,9 +265,10 @@ columns(Matrix) ->
     {column(Matrix, 1), column(Matrix, 2), column(Matrix, 3)}.
 
 -doc """
-To be written.
+Transpose a 3x3 matrix.
 
-To be written.
+It returns the transpose of a 3x3 matrix: rows become columns and columns
+become rows.
 """.
 -spec transpose(graphics:matrix3()) -> graphics:matrix3().
 transpose(Matrix) ->
@@ -294,18 +279,18 @@ transpose(Matrix) ->
     }.
 
 -doc """
-To be written.
+Invert a 3x3 matrix.
 
-To be written.
+It returns `{ok, Inverse}` when the 3x3 matrix is invertible, and
+`{error, singular}` when `abs(det) < 1.0e-10`.
 """.
 -spec inverse(graphics:matrix3()) -> {ok, graphics:matrix3()} | {error, singular}.
 inverse(Matrix) ->
     Det = determinant(Matrix),
-    case abs(Det) < 1.0e-10 of
+    case erlang:abs(Det) < ?SINGULAR_EPSILON of
         true ->
             {error, singular};
         false ->
-            % Calculate the cofactor matrix
             C11 = element(5, Matrix) * element(9, Matrix) - element(6, Matrix) * element(8, Matrix),
             C12 = -(element(4, Matrix) * element(9, Matrix) - element(6, Matrix) * element(7, Matrix)),
             C13 = element(4, Matrix) * element(8, Matrix) - element(5, Matrix) * element(7, Matrix),
@@ -318,7 +303,6 @@ inverse(Matrix) ->
             C32 = -(element(1, Matrix) * element(6, Matrix) - element(3, Matrix) * element(4, Matrix)),
             C33 = element(1, Matrix) * element(5, Matrix) - element(2, Matrix) * element(4, Matrix),
 
-            % Transpose the cofactor matrix and divide by determinant to get the inverse
             InvDet = 1.0 / Det,
             {ok, {
                 C11 * InvDet, C21 * InvDet, C31 * InvDet,
@@ -328,9 +312,9 @@ inverse(Matrix) ->
     end.
 
 -doc """
-To be written.
+Compute the determinant of a 3x3 matrix.
 
-To be written.
+It computes the determinant of a 3x3 matrix.
 """.
 -spec determinant(graphics:matrix3()) -> float().
 determinant(Matrix) ->
@@ -339,45 +323,63 @@ determinant(Matrix) ->
     element(Matrix, 1, 3) * (element(Matrix, 2, 1) * element(Matrix, 3, 2) - element(Matrix, 2, 2) * element(Matrix, 3, 1)).
 
 -doc """
-To be written.
+Check whether a 3x3 matrix is orthogonal.
 
-To be written.
+It returns `true` when `transpose(M) * M` equals the identity matrix within
+1.0e-6.
 """.
 -spec is_orthogonal(graphics:matrix3()) -> boolean().
-is_orthogonal(_Matrix) ->
-    ok.
+is_orthogonal(Matrix) ->
+    is_equal_to(multiply(transpose(Matrix), Matrix), identity(), ?EPSILON).
 
 -doc """
-To be written.
+Check whether a 3x3 matrix is symmetric.
 
-To be written.
+It returns `true` when the matrix equals its transpose within 1.0e-6.
 """.
 -spec is_symmetric(graphics:matrix3()) -> boolean().
-is_symmetric(_Matrix) ->
-    ok.
+is_symmetric(Matrix) ->
+    is_equal_to(Matrix, transpose(Matrix), ?EPSILON).
 
 -doc """
-To be written.
+Add a 3x3 matrix to another 3x3 matrix.
 
-To be written.
+It adds the corresponding elements of two 3x3 matrices.
 """.
 -spec add(graphics:matrix3(), graphics:matrix3()) -> graphics:matrix3().
-add(_Matrix1, _Matrix2) ->
-    ok.
+add(
+    {A11, A21, A31, A12, A22, A32, A13, A23, A33},
+    {B11, B21, B31, B12, B22, B32, B13, B23, B33}
+) ->
+    {
+        A11 + B11, A21 + B21, A31 + B31,
+        A12 + B12, A22 + B22, A32 + B32,
+        A13 + B13, A23 + B23, A33 + B33
+    }.
 
 -doc """
-To be written.
+Subtract a 3x3 matrix from another 3x3 matrix.
 
-To be written.
+It subtracts the corresponding elements of the second 3x3 matrix from the
+first.
 """.
 -spec subtract(graphics:matrix3(), graphics:matrix3()) -> graphics:matrix3().
-subtract(_Matrix1, _Matrix2) ->
-    ok.
+subtract(
+    {A11, A21, A31, A12, A22, A32, A13, A23, A33},
+    {B11, B21, B31, B12, B22, B32, B13, B23, B33}
+) ->
+    {
+        A11 - B11, A21 - B21, A31 - B31,
+        A12 - B12, A22 - B22, A32 - B32,
+        A13 - B13, A23 - B23, A33 - B33
+    }.
 
 -doc """
-To be written.
+Multiply two 3x3 matrices.
 
-To be written.
+It computes the matrix product of two 3x3 matrices. If the first matrix is
+denoted A and the second is B, it does `A * B`. The operation is not
+commutative.
 """.
 -spec multiply(graphics:matrix3(), graphics:matrix3()) -> graphics:matrix3().
 multiply(Matrix1, Matrix2) ->
@@ -414,56 +416,95 @@ multiply(Matrix1, Matrix2) ->
     {C11, C21, C31, C12, C22, C32, C13, C23, C33}.
 
 -doc """
-To be written.
+Multiply a 3x3 matrix by a 2D point.
 
-To be written.
+It transforms a 2D point by a 3x3 matrix. The point is treated as a homogeneous
+vector `{X, Y, 1.0}`. If the resulting W component is not 1.0, the XY result is
+divided by W.
+
+To transform a direction (`W = 0.0`), use `transform2:transform_direction/2`.
 """.
 -spec multiply_vector(graphics:matrix3(), graphics:vector2()) ->
-    graphics:matrix3().
-multiply_vector(_Matrix, _Vector) ->
-    ok.
+    graphics:vector2().
+multiply_vector({M11, M21, M31, M12, M22, M32, M13, M23, M33}, {X, Y}) ->
+    X2 = M11 * X + M12 * Y + M13,
+    Y2 = M21 * X + M22 * Y + M23,
+    W2 = M31 * X + M32 * Y + M33,
+    case W2 of
+        1.0 ->
+            {X2, Y2};
+        _ ->
+            {X2 / W2, Y2 / W2}
+    end.
 
 -doc """
-To be written.
+Scale a 3x3 matrix by a scalar.
 
-To be written.
+It multiplies every element of a 3x3 matrix by a scalar.
 """.
 -spec scale(graphics:matrix3(), float()) -> graphics:matrix3().
-scale(_Matrix, _Scalar) ->
-    ok.
+scale({M11, M21, M31, M12, M22, M32, M13, M23, M33}, Scalar) ->
+    {
+        M11 * Scalar, M21 * Scalar, M31 * Scalar,
+        M12 * Scalar, M22 * Scalar, M32 * Scalar,
+        M13 * Scalar, M23 * Scalar, M33 * Scalar
+    }.
 
 -doc """
-To be written.
+Divide a 3x3 matrix by a scalar.
 
-To be written.
+It divides every element of a 3x3 matrix by a scalar. Dividing by zero yields
+IEEE `inf` or `NaN`.
 """.
 -spec divide(graphics:matrix3(), float()) -> graphics:matrix3().
-divide(_Matrix, _Divider) ->
-    ok.
+divide(Matrix, Divider) ->
+    scale(Matrix, 1.0 / Divider).
 
 -doc """
-To be written.
+Check whether two 3x3 matrices are equal.
 
-To be written.
+It returns `true` when every pair of corresponding elements compares equal. The
+values `+0.0` and `-0.0` are treated as equal.
 """.
 -spec is_equal_to(graphics:matrix3(), graphics:matrix3()) -> boolean().
-is_equal_to(_Matrix1, _Matrix2) ->
-    ok.
+is_equal_to(
+    {A11, A21, A31, A12, A22, A32, A13, A23, A33},
+    {B11, B21, B31, B12, B22, B32, B13, B23, B33}
+) ->
+    A11 == B11 andalso A21 == B21 andalso A31 == B31
+        andalso A12 == B12 andalso A22 == B22 andalso A32 == B32
+        andalso A13 == B13 andalso A23 == B23 andalso A33 == B33.
 
 -doc """
-To be written.
+Check whether two 3x3 matrices are equal within an epsilon.
 
-To be written.
+It returns `true` when each pair of corresponding elements differs by at most
+`Epsilon`.
 """.
 -spec is_equal_to(graphics:matrix3(), graphics:matrix3(), float()) ->
     boolean().
-is_equal_to(_Matrix1, _Matrix2, _Epsilon) ->
-    ok.
+is_equal_to(
+    {A11, A21, A31, A12, A22, A32, A13, A23, A33},
+    {B11, B21, B31, B12, B22, B32, B13, B23, B33},
+    Epsilon
+) ->
+    erlang:abs(A11 - B11) =< Epsilon
+        andalso erlang:abs(A21 - B21) =< Epsilon
+        andalso erlang:abs(A31 - B31) =< Epsilon
+        andalso erlang:abs(A12 - B12) =< Epsilon
+        andalso erlang:abs(A22 - B22) =< Epsilon
+        andalso erlang:abs(A32 - B32) =< Epsilon
+        andalso erlang:abs(A13 - B13) =< Epsilon
+        andalso erlang:abs(A23 - B23) =< Epsilon
+        andalso erlang:abs(A33 - B33) =< Epsilon.
 
 -doc """
-To be written.
+Embed a 3x3 matrix in a 4x4 matrix.
 
-To be written.
+It embeds a 3x3 matrix into the XY affine block of a 4x4 matrix. The Z column
+and row become the identity axis.
+
+`to_matrix3(to_matrix4(M))` returns `M`.
 """.
 -spec to_matrix4(graphics:matrix3()) -> graphics:matrix4().
 to_matrix4({M11, M21, M31, M12, M22, M32, M13, M23, M33}) ->
@@ -475,21 +516,23 @@ to_matrix4({M11, M21, M31, M12, M22, M32, M13, M23, M33}) ->
     }.
 
 -doc """
-To be written.
+Linearly interpolate two 3x3 matrices.
 
-To be written.
+It interpolates corresponding elements from the first 3x3 matrix to the second
+using `T`. This is component-wise interpolation, not rigid-transform
+interpolation. `T` is not clamped.
 """.
 -spec lerp(graphics:matrix3(), graphics:matrix3(), float()) -> graphics:matrix3().
-lerp(_Matrix1, _Matrix2, _T) ->
-    % XXX
-
-    ok.
+lerp(Matrix1, Matrix2, T) ->
+    add(Matrix1, scale(subtract(Matrix2, Matrix1), T)).
 
 -doc """
-To be written.
+Smoothly interpolate two 3x3 matrices.
 
-To be written.
+It interpolates corresponding elements using the Hermite smoothstep
+`T * T * (3.0 - 2.0 * T)`, then `lerp/3`. `T` is not clamped.
 """.
--spec smooth_lerp(graphics:matrix3(), graphics:matrix3(), float()) -> graphics:matrix3().
+-spec smooth_lerp(graphics:matrix3(), graphics:matrix3(), float()) ->
+    graphics:matrix3().
 smooth_lerp(Matrix1, Matrix2, T) ->
     lerp(Matrix1, Matrix2, T * T * (3.0 - 2.0 * T)).

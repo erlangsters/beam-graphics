@@ -11,6 +11,8 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("beam_graphics/include/graphics.hrl").
 
+-define(EPS, 1.0e-6).
+
 matrix4_test() ->
     Matrix = {
         1.0, 2.0, 3.0, 4.0,
@@ -19,106 +21,67 @@ matrix4_test() ->
         13.0, 14.0, 15.0, 16.0
     },
     1.0 = matrix4:element(Matrix, 1, 1),
-    2.0 = matrix4:element(Matrix, 2, 1),
-    3.0 = matrix4:element(Matrix, 3, 1),
     4.0 = matrix4:element(Matrix, 4, 1),
     5.0 = matrix4:element(Matrix, 1, 2),
-    6.0 = matrix4:element(Matrix, 2, 2),
-    7.0 = matrix4:element(Matrix, 3, 2),
-    8.0 = matrix4:element(Matrix, 4, 2),
-    9.0 = matrix4:element(Matrix, 1, 3),
-    10.0 = matrix4:element(Matrix, 2, 3),
-    11.0 = matrix4:element(Matrix, 3, 3),
-    12.0 = matrix4:element(Matrix, 4, 3),
-    13.0 = matrix4:element(Matrix, 1, 4),
-    14.0 = matrix4:element(Matrix, 2, 4),
-    15.0 = matrix4:element(Matrix, 3, 4),
     16.0 = matrix4:element(Matrix, 4, 4),
-
     {1.0, 5.0, 9.0, 13.0} = matrix4:row(Matrix, 1),
-    {2.0, 6.0, 10.0, 14.0} = matrix4:row(Matrix, 2),
-    {3.0, 7.0, 11.0, 15.0} = matrix4:row(Matrix, 3),
     {4.0, 8.0, 12.0, 16.0} = matrix4:row(Matrix, 4),
-
     {1.0, 2.0, 3.0, 4.0} = matrix4:column(Matrix, 1),
-    {5.0, 6.0, 7.0, 8.0} = matrix4:column(Matrix, 2),
-    {9.0, 10.0, 11.0, 12.0} = matrix4:column(Matrix, 3),
     {13.0, 14.0, 15.0, 16.0} = matrix4:column(Matrix, 4),
-
     {
         {1.0, 5.0, 9.0, 13.0},
         {2.0, 6.0, 10.0, 14.0},
         {3.0, 7.0, 11.0, 15.0},
         {4.0, 8.0, 12.0, 16.0}
     } = matrix4:rows(Matrix),
-
     {
         {1.0, 2.0, 3.0, 4.0},
         {5.0, 6.0, 7.0, 8.0},
         {9.0, 10.0, 11.0, 12.0},
         {13.0, 14.0, 15.0, 16.0}
     } = matrix4:columns(Matrix),
-
     ok.
 
 matrix4_zero_test() ->
-    {
-        0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0
-    } = matrix4:zero(),
-    {
-        0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0
-    } = ?MATRIX4_ZERO,
-
+    Zero = matrix4:zero(),
+    Zero = ?MATRIX4_ZERO,
+    true = matrix4:is_zero(Zero),
+    false = matrix4:is_zero(matrix4:identity()),
     ok.
 
 matrix4_identity_test() ->
-    {
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0
-    } = matrix4:identity(),
-    {
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0
-    } = ?MATRIX4_IDENTITY,
-
+    Identity = matrix4:identity(),
+    Identity = ?MATRIX4_IDENTITY,
+    true = matrix4:is_identity(Identity),
+    false = matrix4:is_identity(matrix4:zero()),
     ok.
 
 matrix4_from_rows_test() ->
-    Row1 = {1.0, 2.0, 3.0, 4.0},
-    Row2 = {5.0, 6.0, 7.0, 8.0},
-    Row3 = {9.0, 10.0, 11.0, 12.0},
-    Row4 = {13.0, 14.0, 15.0, 16.0},
     {
         1.0, 5.0, 9.0, 13.0,
         2.0, 6.0, 10.0, 14.0,
         3.0, 7.0, 11.0, 15.0,
         4.0, 8.0, 12.0, 16.0
-    } = matrix4:from_rows(Row1, Row2, Row3, Row4),
-
+    } = matrix4:from_rows(
+        {1.0, 2.0, 3.0, 4.0},
+        {5.0, 6.0, 7.0, 8.0},
+        {9.0, 10.0, 11.0, 12.0},
+        {13.0, 14.0, 15.0, 16.0}
+    ),
     ok.
 
 matrix4_from_columns_test() ->
-    Column1 = {1.0, 2.0, 3.0, 4.0},
-    Column2 = {5.0, 6.0, 7.0, 8.0},
-    Column3 = {9.0, 10.0, 11.0, 12.0},
-    Column4 = {13.0, 14.0, 15.0, 16.0},
     {
         1.0, 2.0, 3.0, 4.0,
         5.0, 6.0, 7.0, 8.0,
         9.0, 10.0, 11.0, 12.0,
         13.0, 14.0, 15.0, 16.0
-    } = matrix4:from_columns(Column1, Column2, Column3, Column4),
-
+    } = matrix4:from_columns(
+        {1.0, 2.0, 3.0, 4.0},
+        {5.0, 6.0, 7.0, 8.0},
+        {9.0, 10.0, 11.0, 12.0},
+        {13.0, 14.0, 15.0, 16.0}
+    ),
     ok.
 
 matrix4_transpose_test() ->
@@ -128,124 +91,184 @@ matrix4_transpose_test() ->
         {9.0, 10.0, 11.0, 12.0},
         {13.0, 14.0, 15.0, 16.0}
     ),
-    TransposeMatrix = matrix4:from_rows(
+    Transpose = matrix4:from_rows(
         {1.0, 5.0, 9.0, 13.0},
         {2.0, 6.0, 10.0, 14.0},
         {3.0, 7.0, 11.0, 15.0},
         {4.0, 8.0, 12.0, 16.0}
     ),
-    TransposeMatrix = matrix4:transpose(Matrix),
-
+    Transpose = matrix4:transpose(Matrix),
     ok.
 
 matrix4_inverse_test() ->
-
+    {ok, Identity} = matrix4:inverse(matrix4:identity()),
+    true = matrix4:is_equal_to(Identity, matrix4:identity(), ?EPS),
+    Scale = matrix4:from_rows(
+        {2.0, 0.0, 0.0, 0.0},
+        {0.0, 3.0, 0.0, 0.0},
+        {0.0, 0.0, 4.0, 0.0},
+        {0.0, 0.0, 0.0, 5.0}
+    ),
+    {ok, InverseScale} = matrix4:inverse(Scale),
+    true = matrix4:is_equal_to(
+        InverseScale,
+        matrix4:from_rows(
+            {0.5, 0.0, 0.0, 0.0},
+            {0.0, 1.0 / 3.0, 0.0, 0.0},
+            {0.0, 0.0, 0.25, 0.0},
+            {0.0, 0.0, 0.0, 0.2}
+        ),
+        ?EPS
+    ),
+    Rotation = matrix4:from_rows(
+        {0.0, 1.0, 0.0, 0.0},
+        {-1.0, 0.0, 0.0, 0.0},
+        {0.0, 0.0, 1.0, 0.0},
+        {0.0, 0.0, 0.0, 1.0}
+    ),
+    {ok, InverseRotation} = matrix4:inverse(Rotation),
+    true = matrix4:is_equal_to(InverseRotation, matrix4:transpose(Rotation), ?EPS),
+    Translation = matrix4:from_rows(
+        {1.0, 0.0, 0.0, 5.0},
+        {0.0, 1.0, 0.0, 10.0},
+        {0.0, 0.0, 1.0, 15.0},
+        {0.0, 0.0, 0.0, 1.0}
+    ),
+    {ok, InverseTranslation} = matrix4:inverse(Translation),
+    true = matrix4:is_equal_to(
+        InverseTranslation,
+        matrix4:from_rows(
+            {1.0, 0.0, 0.0, -5.0},
+            {0.0, 1.0, 0.0, -10.0},
+            {0.0, 0.0, 1.0, -15.0},
+            {0.0, 0.0, 0.0, 1.0}
+        ),
+        ?EPS
+    ),
+    Upper = matrix4:from_rows(
+        {1.0, 2.0, 3.0, 4.0},
+        {0.0, 5.0, 6.0, 7.0},
+        {0.0, 0.0, 8.0, 9.0},
+        {0.0, 0.0, 0.0, 10.0}
+    ),
+    {ok, InverseUpper} = matrix4:inverse(Upper),
+    true = matrix4:is_equal_to(matrix4:multiply(Upper, InverseUpper), matrix4:identity(), ?EPS),
+    {error, singular} = matrix4:inverse(matrix4:from_rows(
+        {1.0, 2.0, 3.0, 4.0},
+        {5.0, 6.0, 7.0, 8.0},
+        {9.0, 10.0, 11.0, 12.0},
+        {13.0, 14.0, 15.0, 16.0}
+    )),
     ok.
 
 matrix4_determinant_test() ->
-    % matrix4_determinanttest
-
-    % 1. Identity Matrix (Determinant = 1)
-    % erlang
-
-    % Matrix = [[1, 0, 0, 0],
-    %           [0, 1, 0, 0],
-    %           [0, 0, 1, 0],
-    %           [0, 0, 0, 1]],
-    % Determinant = 1.0.
-
-    % Purpose: Verify the base case (identity matrix has determinant 1).
-    % 2. Singular Matrix (Determinant = 0)
-    % erlang
-
-    % Matrix = [[1, 2, 3, 4],
-    %           [5, 6, 7, 8],
-    %           [9, 10, 11, 12],
-    %           [13, 14, 15, 16]],  % Rows are linearly dependent (Row4 = Row1 + Row2 + Row3)
-    % Determinant = 0.0.
-
-    % Purpose: Test zero-determinant (non-invertible matrix).
-    % 3. Scaling Matrix (Determinant = Product of Diagonals)
-    % erlang
-
-    % Matrix = [[2, 0, 0, 0],
-    %           [0, 3, 0, 0],
-    %           [0, 0, 4, 0],
-    %           [0, 0, 0, 5]],
-    % Determinant = 120.0.  % 2 * 3 * 4 * 5
-
-    % Purpose: Diagonal matrices have trivial determinants.
-    % 4. Rotation Matrix (Determinant = 1)
-    % erlang
-
-    % % 90-degree rotation around Z-axis (cos(90°)=0, sin(90°)=1)
-    % Matrix = [[ 0, 1, 0, 0],
-    %           [-1, 0, 0, 0],
-    %           [ 0, 0, 1, 0],
-    %           [ 0, 0, 0, 1]],
-    % Determinant = 1.0.  % Rotations preserve volume (det = 1)
-
-    % Purpose: Orthogonal matrices (e.g., rotations) have determinant ±1.
-    % 5. Translation Matrix (Determinant = 1)
-    % erlang
-
-    % Matrix = [[1, 0, 0, 5],
-    %           [0, 1, 0, 10],
-    %           [0, 0, 1, 15],
-    %           [0, 0, 0, 1]],
-    % Determinant = 1.0.  % Translations do not affect volume
-
-    % Purpose: Affine transformations (with last row [0,0,0,1]) preserve determinant.
-    % 6. Negative Determinant (Reflection)
-    % erlang
-
-    % Matrix = [[-1, 0, 0, 0],
-    %           [ 0, 1, 0, 0],
-    %           [ 0, 0, 1, 0],
-    %           [ 0, 0, 0, 1]],
-    % Determinant = -1.0.  % Reflection flips orientation
-
-    % Purpose: Verify sign handling.
-    % 7. Random Invertible Matrix
-    % erlang
-
-    % Matrix = [[1, 2, 3, 4],
-    %           [0, 5, 6, 7],
-    %           [0, 0, 8, 9],
-    %           [0, 0, 0, 10]],
-    % Determinant = 400.0.  % Upper triangular: 1 * 5 * 8 * 10
-
-    % Purpose: Test non-trivial but computable case.
-    % 8. Precision Check (Floating-Point)
-    % erlang
-
-    % Matrix = [[1.0, 0.0, 0.0, 0.0],
-    %           [0.0, 1.0, 0.0, 0.0],
-    %           [0.0, 0.0, 1.0, 0.0],
-    %           [0.0, 0.0, 1e-8, 1.0]],
-    % Determinant ≈ 1.0.  % Almost-identity matrix
-
-    % Purpose: Ensure floating-point stability (use abs(Result - Expected) < EPSILON).
+    1.0 = matrix4:determinant(matrix4:identity()),
+    0.0 = matrix4:determinant(matrix4:from_rows(
+        {1.0, 2.0, 3.0, 4.0},
+        {5.0, 6.0, 7.0, 8.0},
+        {9.0, 10.0, 11.0, 12.0},
+        {13.0, 14.0, 15.0, 16.0}
+    )),
+    120.0 = matrix4:determinant(matrix4:from_rows(
+        {2.0, 0.0, 0.0, 0.0},
+        {0.0, 3.0, 0.0, 0.0},
+        {0.0, 0.0, 4.0, 0.0},
+        {0.0, 0.0, 0.0, 5.0}
+    )),
+    1.0 = matrix4:determinant(matrix4:from_rows(
+        {0.0, 1.0, 0.0, 0.0},
+        {-1.0, 0.0, 0.0, 0.0},
+        {0.0, 0.0, 1.0, 0.0},
+        {0.0, 0.0, 0.0, 1.0}
+    )),
+    1.0 = matrix4:determinant(matrix4:from_rows(
+        {1.0, 0.0, 0.0, 5.0},
+        {0.0, 1.0, 0.0, 10.0},
+        {0.0, 0.0, 1.0, 15.0},
+        {0.0, 0.0, 0.0, 1.0}
+    )),
+    -1.0 = matrix4:determinant(matrix4:from_rows(
+        {-1.0, 0.0, 0.0, 0.0},
+        {0.0, 1.0, 0.0, 0.0},
+        {0.0, 0.0, 1.0, 0.0},
+        {0.0, 0.0, 0.0, 1.0}
+    )),
+    400.0 = matrix4:determinant(matrix4:from_rows(
+        {1.0, 2.0, 3.0, 4.0},
+        {0.0, 5.0, 6.0, 7.0},
+        {0.0, 0.0, 8.0, 9.0},
+        {0.0, 0.0, 0.0, 10.0}
+    )),
     ok.
 
 matrix4_is_orthogonal_test() ->
-    % XXX
-
+    true = matrix4:is_orthogonal(matrix4:identity()),
+    true = matrix4:is_orthogonal(matrix4:from_rows(
+        {0.0, 1.0, 0.0, 0.0},
+        {-1.0, 0.0, 0.0, 0.0},
+        {0.0, 0.0, 1.0, 0.0},
+        {0.0, 0.0, 0.0, 1.0}
+    )),
+    false = matrix4:is_orthogonal(matrix4:from_rows(
+        {2.0, 0.0, 0.0, 0.0},
+        {0.0, 3.0, 0.0, 0.0},
+        {0.0, 0.0, 4.0, 0.0},
+        {0.0, 0.0, 0.0, 5.0}
+    )),
     ok.
 
 matrix4_is_symmetric_test() ->
-    % XXX
-
+    true = matrix4:is_symmetric(matrix4:identity()),
+    false = matrix4:is_symmetric(matrix4:from_rows(
+        {1.0, 2.0, 3.0, 4.0},
+        {0.0, 5.0, 6.0, 7.0},
+        {0.0, 0.0, 8.0, 9.0},
+        {0.0, 0.0, 0.0, 10.0}
+    )),
     ok.
 
 matrix4_add_test() ->
-    % XXX
-
+    A = matrix4:from_rows(
+        {1.0, 0.0, 0.0, 0.0},
+        {0.0, 2.0, 0.0, 0.0},
+        {0.0, 0.0, 3.0, 0.0},
+        {0.0, 0.0, 0.0, 4.0}
+    ),
+    B = matrix4:from_rows(
+        {4.0, 0.0, 0.0, 0.0},
+        {0.0, 3.0, 0.0, 0.0},
+        {0.0, 0.0, 2.0, 0.0},
+        {0.0, 0.0, 0.0, 1.0}
+    ),
+    Expected = matrix4:from_rows(
+        {5.0, 0.0, 0.0, 0.0},
+        {0.0, 5.0, 0.0, 0.0},
+        {0.0, 0.0, 5.0, 0.0},
+        {0.0, 0.0, 0.0, 5.0}
+    ),
+    Expected = matrix4:add(A, B),
     ok.
 
 matrix4_subtract_test() ->
-    % XXX
-
+    A = matrix4:from_rows(
+        {5.0, 0.0, 0.0, 0.0},
+        {0.0, 5.0, 0.0, 0.0},
+        {0.0, 0.0, 5.0, 0.0},
+        {0.0, 0.0, 0.0, 5.0}
+    ),
+    B = matrix4:from_rows(
+        {1.0, 0.0, 0.0, 0.0},
+        {0.0, 2.0, 0.0, 0.0},
+        {0.0, 0.0, 3.0, 0.0},
+        {0.0, 0.0, 0.0, 4.0}
+    ),
+    Expected = matrix4:from_rows(
+        {4.0, 0.0, 0.0, 0.0},
+        {0.0, 3.0, 0.0, 0.0},
+        {0.0, 0.0, 2.0, 0.0},
+        {0.0, 0.0, 0.0, 1.0}
+    ),
+    Expected = matrix4:subtract(A, B),
     ok.
 
 matrix4_multiply_test() ->
@@ -261,7 +284,6 @@ matrix4_multiply_test() ->
         {8.0, 7.0, 6.0, 5.0},
         {4.0, 3.0, 2.0, 1.0}
     ),
-
     Result1 = matrix4:from_rows(
         {80.0, 70.0, 60.0, 50.0},
         {240.0, 214.0, 188.0, 162.0},
@@ -276,38 +298,109 @@ matrix4_multiply_test() ->
     ),
     Result1 = matrix4:multiply(Matrix1, Matrix2),
     Result2 = matrix4:multiply(Matrix2, Matrix1),
-
     ok.
 
 matrix4_multiply_vector_test() ->
-    % XXX
-
+    {3.0, 4.0, 5.0} = matrix4:multiply_vector(matrix4:identity(), {3.0, 4.0, 5.0}),
+    Translation = matrix4:from_rows(
+        {1.0, 0.0, 0.0, 1.0},
+        {0.0, 1.0, 0.0, 2.0},
+        {0.0, 0.0, 1.0, 3.0},
+        {0.0, 0.0, 0.0, 1.0}
+    ),
+    {4.0, 6.0, 8.0} = matrix4:multiply_vector(Translation, {3.0, 4.0, 5.0}),
+    Scale = matrix4:from_rows(
+        {2.0, 0.0, 0.0, 0.0},
+        {0.0, 3.0, 0.0, 0.0},
+        {0.0, 0.0, 4.0, 0.0},
+        {0.0, 0.0, 0.0, 1.0}
+    ),
+    {6.0, 12.0, 20.0} = matrix4:multiply_vector(Scale, {3.0, 4.0, 5.0}),
+    Perspective = matrix4:from_rows(
+        {1.0, 0.0, 0.0, 0.0},
+        {0.0, 1.0, 0.0, 0.0},
+        {0.0, 0.0, 1.0, 0.0},
+        {0.0, 0.0, 0.0, 2.0}
+    ),
+    {0.5, 1.0, 1.5} = matrix4:multiply_vector(Perspective, {1.0, 2.0, 3.0}),
     ok.
 
 matrix4_scale_test() ->
-    % XXX
-
+    A = matrix4:from_rows(
+        {1.0, 0.0, 0.0, 0.0},
+        {0.0, 2.0, 0.0, 0.0},
+        {0.0, 0.0, 3.0, 0.0},
+        {0.0, 0.0, 0.0, 4.0}
+    ),
+    Expected = matrix4:from_rows(
+        {2.0, 0.0, 0.0, 0.0},
+        {0.0, 4.0, 0.0, 0.0},
+        {0.0, 0.0, 6.0, 0.0},
+        {0.0, 0.0, 0.0, 8.0}
+    ),
+    Expected = matrix4:scale(A, 2.0),
     ok.
 
 matrix4_divide_test() ->
-    % XXX
-
+    A = matrix4:from_rows(
+        {2.0, 0.0, 0.0, 0.0},
+        {0.0, 4.0, 0.0, 0.0},
+        {0.0, 0.0, 6.0, 0.0},
+        {0.0, 0.0, 0.0, 8.0}
+    ),
+    Expected = matrix4:from_rows(
+        {1.0, 0.0, 0.0, 0.0},
+        {0.0, 2.0, 0.0, 0.0},
+        {0.0, 0.0, 3.0, 0.0},
+        {0.0, 0.0, 0.0, 4.0}
+    ),
+    Expected = matrix4:divide(A, 2.0),
     ok.
 
 matrix4_is_equal_to_test() ->
-    % XXX
-
+    true = matrix4:is_equal_to(matrix4:identity(), matrix4:identity()),
+    false = matrix4:is_equal_to(matrix4:identity(), matrix4:zero()),
+    true = matrix4:is_equal_to(
+        matrix4:identity(),
+        matrix4:add(matrix4:identity(), matrix4:scale(matrix4:identity(), 1.0e-7)),
+        ?EPS
+    ),
     ok.
 
 matrix4_to_matrix3_test() ->
+    M3 = matrix3:from_rows({1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}),
+    M3 = matrix4:to_matrix3(matrix3:to_matrix4(M3)),
     ok.
 
 matrix4_lerp_test() ->
-    % XXX
-
+    A = matrix4:zero(),
+    B = matrix4:from_rows(
+        {2.0, 0.0, 0.0, 0.0},
+        {0.0, 4.0, 0.0, 0.0},
+        {0.0, 0.0, 6.0, 0.0},
+        {0.0, 0.0, 0.0, 8.0}
+    ),
+    A = matrix4:lerp(A, B, 0.0),
+    B = matrix4:lerp(A, B, 1.0),
+    Half = matrix4:from_rows(
+        {1.0, 0.0, 0.0, 0.0},
+        {0.0, 2.0, 0.0, 0.0},
+        {0.0, 0.0, 3.0, 0.0},
+        {0.0, 0.0, 0.0, 4.0}
+    ),
+    Half = matrix4:lerp(A, B, 0.5),
     ok.
 
 matrix4_smooth_lerp_test() ->
-    % XXX
-
+    A = matrix4:zero(),
+    B = matrix4:from_rows(
+        {10.0, 0.0, 0.0, 0.0},
+        {0.0, 0.0, 0.0, 0.0},
+        {0.0, 0.0, 0.0, 0.0},
+        {0.0, 0.0, 0.0, 0.0}
+    ),
+    A = matrix4:smooth_lerp(A, B, 0.0),
+    B = matrix4:smooth_lerp(A, B, 1.0),
+    Mid = matrix4:smooth_lerp(A, B, 0.25),
+    true = matrix4:element(Mid, 1, 1) < 2.5,
     ok.

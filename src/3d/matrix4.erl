@@ -8,74 +8,56 @@
 %% Written by Jonathan De Wachter <jonathan.dewachter@byteplug.io>
 %%
 -module(matrix4).
-
 -moduledoc """
 4x4 Matrix
 
 A 4x4 matrix is a grid of numbers that is typically used to represent 3D
 transformations in the Euclidean space.
 
-It can also be used as a 2x3 matrix (by ignoring the third
-row and assuming its value is [0, 0, 1], also called the homogeneous '
-coordinates) and therefore define operations with 2D vectors.
+> While 4x4 matrices are powerful, manually constructing them for
+> transformations can be error-prone. For common 3D operations
+> (e.g., translation, rotation), prefer the `transform3` API, which wraps a
+> 4x4 matrix in a more ergonomic interface.
 
-It's an unintuitive mathematical structure that is hard to manipulate
-directly. Instead, use the transform2 and view2 modules that provides
-higher-level operation to define your 2D transformations. They both wrap a
-a 4x4 matrix.
-of that, it's recommended to use the transform2 module that provides a more
-convenient interface to manipulate 2D transformations.
-The data structure of a 4x4 matrix simply is a tuple of 9 floats where the
-elements represent the 2D array from top to bottom, left to right. Therefore,
-4x4 matrices can naturally be created with the tuple syntax.
+The data structure of a 4x4 matrix simply is a flat tuple of 16 floats in
+column-major order (top-to-bottom, left-to-right). Therefore, 4x4 matrices can
+naturally be created with the tuple syntax.
+
+```erlang
+M = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0}.
 ```
-M = {
-    1.0, 2.0, 3.0,
-    4.0, 5.0, 6.0,
-    7.0, 8.0, 9.0
-}.
+
+To access the elements of a 4x4 matrix, use the `element/3` function with a
+1-based row and column. Use `row/2` and `column/2` to extract a whole row or
+column, and `from_rows/4` or `from_columns/4` to build a matrix from vectors.
+
+```erlang
+1.0 = matrix4:element(M, 1, 1).
+4.0 = matrix4:element(M, 4, 1).
+13.0 = matrix4:element(M, 1, 4).
 ```
-To access the elements of a 4x4 matrix, use either the `element/2` or
-`element3` function.
-```
-1.0 = matrix3:elem(M, 1).
-4.0 = matrix3:elem(M, 4).
-1.0 = matrix3:element(M, 1, 1).
-3.0 = matrix3:element(M, 3, 1).
-7.0 = matrix3:element(M, 1, 3).
-```
+
 A 4x4 matrix where all the elements are set to zero is called a zero matrix,
-which can be conveniently created with the zero/0 function. Also a zero 4x4
-matrix with a 1.0 in the bottom right corner is called an identity matrix,
-which can be conveniently created with the identity/0 function.
-```
-{
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0
-} = matrix3:zero().
-{
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0
-} = matrix3:identity().
-```
-Constants are also defined to represent the zero and identity 4x4 matrix.
-You must include the `beam_graphics.hrl` header to use them.
-```
-{
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0
-} = ?MATRIX_4x4_ZERO.
-{
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0
-} = ?MATRIX_4x4_IDENTITY.
+which can be conveniently created with the `zero/0` function. A 4x4 matrix with
+1.0 on the diagonal and 0.0 elsewhere is called an identity matrix, which can
+be conveniently created with the `identity/0` function.
+
+```erlang
+{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0} = matrix4:zero().
+{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0} = matrix4:identity().
 ```
 
-The common mathematical operations are also implemented.
+Macros are also defined to represent the zero and identity 4x4 matrices. (The
+`graphics.hrl` header must be included.)
+
+```erlang
+{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0} = ?MATRIX4_ZERO.
+{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0} = ?MATRIX4_IDENTITY.
+```
+
+The common mathematical operations are also implemented. `multiply/2` is the
+matrix product. `scale/2` multiplies every element by a scalar. To transform a
+3D point, use `multiply_vector/2`.
 """.
 
 -export([
@@ -125,7 +107,8 @@ The common mathematical operations are also implemented.
     smooth_lerp/3
 ]).
 
--type vector4() :: {float(), float(), float(), float()}.
+-define(EPSILON, 1.0e-6).
+-define(SINGULAR_EPSILON, 1.0e-10).
 
 -doc """
 The zero 4x4 matrix.
@@ -149,24 +132,23 @@ zero() ->
     }.
 
 -doc """
-To be written.
+Check whether a 4x4 matrix is zero.
 
-To be written.
+It returns `true` when every element is zero. The values `+0.0` and `-0.0` are
+treated as equal.
 """.
 -spec is_zero(graphics:matrix4()) -> boolean().
-is_zero(_Matrix) ->
-    % XXX
-
-    ok.
+is_zero(Matrix) ->
+    is_equal_to(Matrix, zero()).
 
 -doc """
 The identity 4x4 matrix.
 
-It constructs a zero 4x4 matrix.
+It constructs a 4x4 identity matrix.
 
 ```erlang
 {1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0} =
-    matrix3:identity().
+    matrix4:identity().
 ```
 
 Note that the `?MATRIX4_IDENTITY` macro can be used instead.
@@ -181,22 +163,22 @@ identity() ->
     }.
 
 -doc """
-To be written.
+Check whether a 4x4 matrix is the identity.
 
-To be written.
+It returns `true` when the matrix equals the identity matrix within 1.0e-6.
 """.
 -spec is_identity(graphics:matrix4()) -> boolean().
-is_identity(_Matrix) ->
-    % XXX
-
-    ok.
+is_identity(Matrix) ->
+    is_equal_to(Matrix, identity(), ?EPSILON).
 
 -doc """
-To be written.
+Create a 4x4 matrix from rows.
 
-To be written.
+It constructs a 4x4 matrix from four row vectors. The first argument is the
+top row.
 """.
--spec from_rows(vector4(), vector4(), vector4(), vector4()) -> graphics:matrix4().
+-spec from_rows(graphics:vector4(), graphics:vector4(), graphics:vector4(), graphics:vector4()) ->
+    graphics:matrix4().
 from_rows(Row1, Row2, Row3, Row4) ->
     {
         element(1, Row1), element(1, Row2), element(1, Row3), element(1, Row4),
@@ -206,11 +188,13 @@ from_rows(Row1, Row2, Row3, Row4) ->
     }.
 
 -doc """
-To be written.
+Create a 4x4 matrix from columns.
 
-To be written.
+It constructs a 4x4 matrix from four column vectors. The first argument is the
+left column.
 """.
--spec from_columns(vector4(), vector4(), vector4(), vector4()) -> graphics:matrix4().
+-spec from_columns(graphics:vector4(), graphics:vector4(), graphics:vector4(), graphics:vector4()) ->
+    graphics:matrix4().
 from_columns(Column1, Column2, Column3, Column4) ->
     {
         element(1, Column1), element(2, Column1), element(3, Column1), element(4, Column1),
@@ -220,11 +204,11 @@ from_columns(Column1, Column2, Column3, Column4) ->
     }.
 
 -doc """
-To be written.
+An element of a 4x4 matrix.
 
-To be written.
+It returns the element at the given 1-based row and column.
 """.
--spec element(graphics:matrix4(), integer(), integer()) -> float().
+-spec element(graphics:matrix4(), 1..4, 1..4) -> float().
 element(Matrix, Row, Column) ->
     case {Row, Column} of
         {1, 1} -> element(1, Matrix);
@@ -246,11 +230,11 @@ element(Matrix, Row, Column) ->
     end.
 
 -doc """
-To be written.
+A row of a 4x4 matrix.
 
-To be written.
+It returns the row at the given 1-based index as a 4-tuple.
 """.
--spec row(graphics:matrix4(), Index :: 1..4) -> graphics:vector4().
+-spec row(graphics:matrix4(), 1..4) -> graphics:vector4().
 row(Matrix, Row) ->
     case Row of
         1 -> {element(1, Matrix), element(5, Matrix), element(9, Matrix), element(13, Matrix)};
@@ -260,11 +244,11 @@ row(Matrix, Row) ->
     end.
 
 -doc """
-To be written.
+A column of a 4x4 matrix.
 
-To be written.
+It returns the column at the given 1-based index as a 4-tuple.
 """.
--spec column(graphics:matrix4(), Index :: 1..4) -> graphics:vector4().
+-spec column(graphics:matrix4(), 1..4) -> graphics:vector4().
 column(Matrix, Column) ->
     case Column of
         1 -> {element(1, Matrix), element(2, Matrix), element(3, Matrix), element(4, Matrix)};
@@ -274,9 +258,10 @@ column(Matrix, Column) ->
     end.
 
 -doc """
-To be written.
+The rows of a 4x4 matrix.
 
-To be written.
+It returns the four row vectors of the 4x4 matrix as a tuple, from top to
+bottom.
 """.
 -spec rows(graphics:matrix4()) ->
     {graphics:vector4(), graphics:vector4(), graphics:vector4(), graphics:vector4()}.
@@ -284,9 +269,10 @@ rows(Matrix) ->
     {row(Matrix, 1), row(Matrix, 2), row(Matrix, 3), row(Matrix, 4)}.
 
 -doc """
-To be written.
+The columns of a 4x4 matrix.
 
-To be written.
+It returns the four column vectors of the 4x4 matrix as a tuple, from left to
+right.
 """.
 -spec columns(graphics:matrix4()) ->
     {graphics:vector4(), graphics:vector4(), graphics:vector4(), graphics:vector4()}.
@@ -294,81 +280,140 @@ columns(Matrix) ->
     {column(Matrix, 1), column(Matrix, 2), column(Matrix, 3), column(Matrix, 4)}.
 
 -doc """
-To be written.
+Transpose a 4x4 matrix.
 
-To be written.
+It returns the transpose of a 4x4 matrix: rows become columns and columns
+become rows.
 """.
 -spec transpose(graphics:matrix4()) -> graphics:matrix4().
 transpose(Matrix) ->
     {
-        element(1, Matrix), element(5, Matrix), element(9, Matrix),
-        element(13, Matrix),
-        element(2, Matrix), element(6, Matrix), element(10, Matrix),
-        element(14, Matrix),
-        element(3, Matrix), element(7, Matrix), element(11, Matrix),
-        element(15, Matrix),
-        element(4, Matrix), element(8, Matrix), element(12, Matrix),
-        element(16, Matrix)
+        element(1, Matrix), element(5, Matrix), element(9, Matrix), element(13, Matrix),
+        element(2, Matrix), element(6, Matrix), element(10, Matrix), element(14, Matrix),
+        element(3, Matrix), element(7, Matrix), element(11, Matrix), element(15, Matrix),
+        element(4, Matrix), element(8, Matrix), element(12, Matrix), element(16, Matrix)
     }.
 
 -doc """
-To be written.
+Invert a 4x4 matrix.
 
-To be written.
+It returns `{ok, Inverse}` when the 4x4 matrix is invertible, and
+`{error, singular}` when `abs(det) < 1.0e-10`.
 """.
--spec inverse(graphics:matrix4()) -> graphics:matrix4() | undefined.
-inverse(_Matrix) ->
-    ok.
+-spec inverse(graphics:matrix4()) -> {ok, graphics:matrix4()} | {error, singular}.
+inverse({
+    M11, M21, M31, M41,
+    M12, M22, M32, M42,
+    M13, M23, M33, M43,
+    M14, M24, M34, M44
+}) ->
+    C11 = det3(M22, M23, M24, M32, M33, M34, M42, M43, M44),
+    C12 = -det3(M21, M23, M24, M31, M33, M34, M41, M43, M44),
+    C13 = det3(M21, M22, M24, M31, M32, M34, M41, M42, M44),
+    C14 = -det3(M21, M22, M23, M31, M32, M33, M41, M42, M43),
+    C21 = -det3(M12, M13, M14, M32, M33, M34, M42, M43, M44),
+    C22 = det3(M11, M13, M14, M31, M33, M34, M41, M43, M44),
+    C23 = -det3(M11, M12, M14, M31, M32, M34, M41, M42, M44),
+    C24 = det3(M11, M12, M13, M31, M32, M33, M41, M42, M43),
+    C31 = det3(M12, M13, M14, M22, M23, M24, M42, M43, M44),
+    C32 = -det3(M11, M13, M14, M21, M23, M24, M41, M43, M44),
+    C33 = det3(M11, M12, M14, M21, M22, M24, M41, M42, M44),
+    C34 = -det3(M11, M12, M13, M21, M22, M23, M41, M42, M43),
+    C41 = -det3(M12, M13, M14, M22, M23, M24, M32, M33, M34),
+    C42 = det3(M11, M13, M14, M21, M23, M24, M31, M33, M34),
+    C43 = -det3(M11, M12, M14, M21, M22, M24, M31, M32, M34),
+    C44 = det3(M11, M12, M13, M21, M22, M23, M31, M32, M33),
+    Det = M11 * C11 + M12 * C12 + M13 * C13 + M14 * C14,
+    case erlang:abs(Det) < ?SINGULAR_EPSILON of
+        true ->
+            {error, singular};
+        false ->
+            InvDet = 1.0 / Det,
+            {ok, {
+                C11 * InvDet, C12 * InvDet, C13 * InvDet, C14 * InvDet,
+                C21 * InvDet, C22 * InvDet, C23 * InvDet, C24 * InvDet,
+                C31 * InvDet, C32 * InvDet, C33 * InvDet, C34 * InvDet,
+                C41 * InvDet, C42 * InvDet, C43 * InvDet, C44 * InvDet
+            }}
+    end.
 
 -doc """
-To be written.
+Compute the determinant of a 4x4 matrix.
 
-To be written.
+It computes the determinant of a 4x4 matrix.
 """.
 -spec determinant(graphics:matrix4()) -> float().
-determinant(_Matrix) ->
-    ok.
+determinant({
+    M11, M21, M31, M41,
+    M12, M22, M32, M42,
+    M13, M23, M33, M43,
+    M14, M24, M34, M44
+}) ->
+    M11 * det3(M22, M23, M24, M32, M33, M34, M42, M43, M44) -
+    M12 * det3(M21, M23, M24, M31, M33, M34, M41, M43, M44) +
+    M13 * det3(M21, M22, M24, M31, M32, M34, M41, M42, M44) -
+    M14 * det3(M21, M22, M23, M31, M32, M33, M41, M42, M43).
 
 -doc """
-To be written.
+Check whether a 4x4 matrix is orthogonal.
 
-To be written.
+It returns `true` when `transpose(M) * M` equals the identity matrix within
+1.0e-6.
 """.
 -spec is_orthogonal(graphics:matrix4()) -> boolean().
-is_orthogonal(_Matrix) ->
-    ok.
+is_orthogonal(Matrix) ->
+    is_equal_to(multiply(transpose(Matrix), Matrix), identity(), ?EPSILON).
 
 -doc """
-To be written.
+Check whether a 4x4 matrix is symmetric.
 
-To be written.
+It returns `true` when the matrix equals its transpose within 1.0e-6.
 """.
 -spec is_symmetric(graphics:matrix4()) -> boolean().
-is_symmetric(_Matrix) ->
-    ok.
+is_symmetric(Matrix) ->
+    is_equal_to(Matrix, transpose(Matrix), ?EPSILON).
 
 -doc """
-To be written.
+Add a 4x4 matrix to another 4x4 matrix.
 
-To be written.
+It adds the corresponding elements of two 4x4 matrices.
 """.
 -spec add(graphics:matrix4(), graphics:matrix4()) -> graphics:matrix4().
-add(_Matrix1, _Matrix2) ->
-    ok.
+add(
+    {A11, A21, A31, A41, A12, A22, A32, A42, A13, A23, A33, A43, A14, A24, A34, A44},
+    {B11, B21, B31, B41, B12, B22, B32, B42, B13, B23, B33, B43, B14, B24, B34, B44}
+) ->
+    {
+        A11 + B11, A21 + B21, A31 + B31, A41 + B41,
+        A12 + B12, A22 + B22, A32 + B32, A42 + B42,
+        A13 + B13, A23 + B23, A33 + B33, A43 + B43,
+        A14 + B14, A24 + B24, A34 + B34, A44 + B44
+    }.
 
 -doc """
-To be written.
+Subtract a 4x4 matrix from another 4x4 matrix.
 
-To be written.
+It subtracts the corresponding elements of the second 4x4 matrix from the
+first.
 """.
 -spec subtract(graphics:matrix4(), graphics:matrix4()) -> graphics:matrix4().
-subtract(_Matrix1, _Matrix2) ->
-    ok.
+subtract(
+    {A11, A21, A31, A41, A12, A22, A32, A42, A13, A23, A33, A43, A14, A24, A34, A44},
+    {B11, B21, B31, B41, B12, B22, B32, B42, B13, B23, B33, B43, B14, B24, B34, B44}
+) ->
+    {
+        A11 - B11, A21 - B21, A31 - B31, A41 - B41,
+        A12 - B12, A22 - B22, A32 - B32, A42 - B42,
+        A13 - B13, A23 - B23, A33 - B33, A43 - B43,
+        A14 - B14, A24 - B24, A34 - B34, A44 - B44
+    }.
 
 -doc """
-To be written.
+Multiply two 4x4 matrices.
 
-To be written.
+It computes the matrix product of two 4x4 matrices. If the first matrix is
+denoted A and the second is B, it does `A * B`. The operation is not
+commutative.
 """.
 -spec multiply(graphics:matrix4(), graphics:matrix4()) -> graphics:matrix4().
 multiply(Matrix1, Matrix2) ->
@@ -440,77 +485,150 @@ multiply(Matrix1, Matrix2) ->
     {C11, C21, C31, C41, C12, C22, C32, C42, C13, C23, C33, C43, C14, C24, C34, C44}.
 
 -doc """
-To be written.
+Multiply a 4x4 matrix by a 3D point.
 
-To be written.
+It transforms a 3D point by a 4x4 matrix. The point is treated as a homogeneous
+vector `{X, Y, Z, 1.0}`. If the resulting W component is not 1.0, the XYZ
+result is divided by W.
+
+To transform a direction (`W = 0.0`), use `transform3:transform_direction/2`.
 """.
 -spec multiply_vector(graphics:matrix4(), graphics:vector3()) ->
-    graphics:matrix4().
-multiply_vector(_Matrix, _Vector) ->
-    ok.
+    graphics:vector3().
+multiply_vector({
+    M11, M21, M31, M41,
+    M12, M22, M32, M42,
+    M13, M23, M33, M43,
+    M14, M24, M34, M44
+}, {X, Y, Z}) ->
+    X2 = M11 * X + M12 * Y + M13 * Z + M14,
+    Y2 = M21 * X + M22 * Y + M23 * Z + M24,
+    Z2 = M31 * X + M32 * Y + M33 * Z + M34,
+    W2 = M41 * X + M42 * Y + M43 * Z + M44,
+    case W2 of
+        1.0 ->
+            {X2, Y2, Z2};
+        _ ->
+            {X2 / W2, Y2 / W2, Z2 / W2}
+    end.
 
 -doc """
-To be written.
+Scale a 4x4 matrix by a scalar.
 
-To be written.
+It multiplies every element of a 4x4 matrix by a scalar.
 """.
 -spec scale(graphics:matrix4(), float()) -> graphics:matrix4().
-scale(_Matrix, _Scalar) ->
-    ok.
+scale({
+    M11, M21, M31, M41,
+    M12, M22, M32, M42,
+    M13, M23, M33, M43,
+    M14, M24, M34, M44
+}, Scalar) ->
+    {
+        M11 * Scalar, M21 * Scalar, M31 * Scalar, M41 * Scalar,
+        M12 * Scalar, M22 * Scalar, M32 * Scalar, M42 * Scalar,
+        M13 * Scalar, M23 * Scalar, M33 * Scalar, M43 * Scalar,
+        M14 * Scalar, M24 * Scalar, M34 * Scalar, M44 * Scalar
+    }.
 
 -doc """
-To be written.
+Divide a 4x4 matrix by a scalar.
 
-To be written.
+It divides every element of a 4x4 matrix by a scalar. Dividing by zero yields
+IEEE `inf` or `NaN`.
 """.
 -spec divide(graphics:matrix4(), float()) -> graphics:matrix4().
-divide(_Matrix, _Divider) ->
-    ok.
+divide(Matrix, Divider) ->
+    scale(Matrix, 1.0 / Divider).
 
 -doc """
-To be written.
+Check whether two 4x4 matrices are equal.
 
-To be written.
+It returns `true` when every pair of corresponding elements compares equal. The
+values `+0.0` and `-0.0` are treated as equal.
 """.
 -spec is_equal_to(graphics:matrix4(), graphics:matrix4()) -> boolean().
-is_equal_to(_Matrix1, _Matrix2) ->
-    ok.
+is_equal_to(
+    {A11, A21, A31, A41, A12, A22, A32, A42, A13, A23, A33, A43, A14, A24, A34, A44},
+    {B11, B21, B31, B41, B12, B22, B32, B42, B13, B23, B33, B43, B14, B24, B34, B44}
+) ->
+    A11 == B11 andalso A21 == B21 andalso A31 == B31 andalso A41 == B41
+        andalso A12 == B12 andalso A22 == B22 andalso A32 == B32 andalso A42 == B42
+        andalso A13 == B13 andalso A23 == B23 andalso A33 == B33 andalso A43 == B43
+        andalso A14 == B14 andalso A24 == B24 andalso A34 == B34 andalso A44 == B44.
 
 -doc """
-To be written.
+Check whether two 4x4 matrices are equal within an epsilon.
 
-To be written.
+It returns `true` when each pair of corresponding elements differs by at most
+`Epsilon`.
 """.
 -spec is_equal_to(graphics:matrix4(), graphics:matrix4(), float()) ->
     boolean().
-is_equal_to(_Matrix1, _Matrix2, _Epsilon) ->
-    ok.
+is_equal_to(
+    {A11, A21, A31, A41, A12, A22, A32, A42, A13, A23, A33, A43, A14, A24, A34, A44},
+    {B11, B21, B31, B41, B12, B22, B32, B42, B13, B23, B33, B43, B14, B24, B34, B44},
+    Epsilon
+) ->
+    erlang:abs(A11 - B11) =< Epsilon
+        andalso erlang:abs(A21 - B21) =< Epsilon
+        andalso erlang:abs(A31 - B31) =< Epsilon
+        andalso erlang:abs(A41 - B41) =< Epsilon
+        andalso erlang:abs(A12 - B12) =< Epsilon
+        andalso erlang:abs(A22 - B22) =< Epsilon
+        andalso erlang:abs(A32 - B32) =< Epsilon
+        andalso erlang:abs(A42 - B42) =< Epsilon
+        andalso erlang:abs(A13 - B13) =< Epsilon
+        andalso erlang:abs(A23 - B23) =< Epsilon
+        andalso erlang:abs(A33 - B33) =< Epsilon
+        andalso erlang:abs(A43 - B43) =< Epsilon
+        andalso erlang:abs(A14 - B14) =< Epsilon
+        andalso erlang:abs(A24 - B24) =< Epsilon
+        andalso erlang:abs(A34 - B34) =< Epsilon
+        andalso erlang:abs(A44 - B44) =< Epsilon.
 
 -doc """
-To be written.
+Extract a 3x3 matrix from a 4x4 matrix.
 
-To be written.
+It extracts the XY affine block of a 4x4 matrix. This is the inverse of
+`matrix3:to_matrix4/1` and is lossless in that direction.
 """.
 -spec to_matrix3(graphics:matrix4()) -> graphics:matrix3().
-to_matrix3(_Matrix) ->
-    ok.
+to_matrix3({
+    M11, M21, _M31, M41,
+    M12, M22, _M32, M42,
+    _M13, _M23, _M33, _M43,
+    M14, M24, _M34, M44
+}) ->
+    {
+        M11, M21, M41,
+        M12, M22, M42,
+        M14, M24, M44
+    }.
 
 -doc """
-To be written.
+Linearly interpolate two 4x4 matrices.
 
-To be written.
+It interpolates corresponding elements from the first 4x4 matrix to the second
+using `T`. This is component-wise interpolation, not rigid-transform
+interpolation. `T` is not clamped.
 """.
 -spec lerp(graphics:matrix4(), graphics:matrix4(), float()) -> graphics:matrix4().
-lerp(_Matrix1, _Matrix2, _T) ->
-    % XXX
-
-    ok.
+lerp(Matrix1, Matrix2, T) ->
+    add(Matrix1, scale(subtract(Matrix2, Matrix1), T)).
 
 -doc """
-To be written.
+Smoothly interpolate two 4x4 matrices.
 
-To be written.
+It interpolates corresponding elements using the Hermite smoothstep
+`T * T * (3.0 - 2.0 * T)`, then `lerp/3`. `T` is not clamped.
 """.
--spec smooth_lerp(graphics:matrix4(), graphics:matrix4(), float()) -> graphics:matrix4().
+-spec smooth_lerp(graphics:matrix4(), graphics:matrix4(), float()) ->
+    graphics:matrix4().
 smooth_lerp(Matrix1, Matrix2, T) ->
     lerp(Matrix1, Matrix2, T * T * (3.0 - 2.0 * T)).
+
+det3(A11, A12, A13, A21, A22, A23, A31, A32, A33) ->
+    A11 * (A22 * A33 - A23 * A32) -
+    A12 * (A21 * A33 - A23 * A31) +
+    A13 * (A21 * A32 - A22 * A31).

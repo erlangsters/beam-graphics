@@ -12,10 +12,7 @@
 3D Vector
 
 A 3D vector is a triplet of numbers that is typically used to represent 3D
-positions and directions in the Euclidean space. Because it can also be seen as
-a 4D vector and a 4x1 matrix if we assume an invisible fourth component set to
-0.0 (also called the homogeneous coordinate), it defines operations with 4x4
-matrices.
+positions and directions in the Euclidean space.
 
 The data structure of a 3D vector simply is a tuple of 3 floats where the first
 component is called X, the second component is called Y and the third component
@@ -26,7 +23,7 @@ syntax.
 V = {1.0, 2.0, 3.0}.
 ```
 
-To access the X components of a 3D vector, use the `x/1` function, to access
+To access the X component of a 3D vector, use the `x/1` function, to access
 the Y component, use the `y/1` function, and to access the Z component, use the
 `z/1` function.
 
@@ -47,7 +44,7 @@ A macro is also defined to represent the zero 3D vector. (The `graphics.hrl`
 header must be included.)
 
 ```erlang
-{0, 0} = ?VECTOR3_ZERO
+{0.0, 0.0, 0.0} = ?VECTOR3_ZERO
 ```
 
 The geometrical operations with 3D vectors are implemented. You can normalize
@@ -56,34 +53,25 @@ dot product and cross product with other 3D vectors.
 
 ```erlang
 7.0710678118654755 = vector3:length({3.0, 4.0, 5.0}).
-{0.4242640687119285, 0.565685424949238, 0.7071067811865475} = vector3:normalize({3.0, 4.0, 5.0})
+{0.4242640687119285, 0.565685424949238, 0.7071067811865475} = vector3:normalize({3.0, 4.0, 5.0}).
 32.0 = vector3:dot_product({1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}).
-{-3.0, 6.0, -3.0} = vector3:cross_product({1.0, 2.0, 3.0}, {4.0, 5.0, 6.0})
+{-3.0, 6.0, -3.0} = vector3:cross_product({1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}).
 ```
 
 The regular mathematical operations are implemented too. You can add and
-subtract with other 3D vectors as well as multiply with scalars. Note that if
-you need to multiply with a 4x4 matrix, see the `matrix4:dot_vector/2`
-function.
+subtract with other 3D vectors as well as multiply with scalars. To transform a
+3D point with a 4x4 matrix, see the `matrix4:multiply_vector/2` function.
 
 ```erlang
 {5.0, 7.0, 9.0} = vector3:add({1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}).
 {-3.0, -3.0, -3.0} = vector3:subtract({1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}).
 {2.0, 4.0, 6.0} = vector3:multiply({1.0, 2.0, 3.0}, 2.0).
- ```
+```
 
-Finally, the 3D vector can be reduced to a 2D vector with the `to_vector2/1`
+Finally, a 3D vector can be reduced to a 2D vector with the `to_vector2/1`
 function.
 
 Beware that a well-formed 3D vector always contains floats, not integers.
-
-XXX: Consider implementing the 'rotation' operation.
-XXX: There should be helpers to ensure integers are converted to floats when the user input may contain integers.
-
-    scale/2 - Explicit scalar multiplication (clearer intent than multiply)
-    divide/2 - Component-wise division
-    negate/1 - Returns the negative of the vector
-
 """.
 
 -export([
@@ -94,11 +82,11 @@ XXX: There should be helpers to ensure integers are converted to floats when the
     is_zero/1
 ]).
 -export([
-    unit/1,
     is_unit/1
 ]).
 -export([
     length/1,
+    length_squared/1,
     normalize/1
 ]).
 -export([
@@ -107,8 +95,9 @@ XXX: There should be helpers to ensure integers are converted to floats when the
 ]).
 -export([
     distance/2,
+    distance_squared/2,
     direction/2,
-    angle/3
+    angle/2, angle/3
 ]).
 -export([
     project/2,
@@ -139,10 +128,6 @@ XXX: There should be helpers to ensure integers are converted to floats when the
     floor/1, ceil/1, round/1
 ]).
 -export([
-    to_angle/2,
-    from_angle/2
-]).
--export([
     lerp/3,
     smooth_lerp/3
 ]).
@@ -150,19 +135,24 @@ XXX: There should be helpers to ensure integers are converted to floats when the
 -compile({inline, [
     zero/0,
     x/1, y/1, z/1,
+    length_squared/1,
     dot_product/2,
     cross_product/2,
     add/2,
     subtract/2,
     multiply/2,
+    divide/2,
+    negate/1,
     to_vector2/1,
     min/2, max/2,
     abs/1,
     floor/1, ceil/1, round/1
 ]}).
 
+-define(EPSILON, 1.0e-6).
+
 -doc """
-The X component of the 3D vector.
+The X component of a 3D vector.
 
 It returns the X component of the 3D vector.
 """.
@@ -171,7 +161,7 @@ x({X, _, _}) ->
     X.
 
 -doc """
-The Y component of the 3D vector.
+The Y component of a 3D vector.
 
 It returns the Y component of the 3D vector.
 """.
@@ -180,7 +170,7 @@ y({_, Y, _}) ->
     Y.
 
 -doc """
-The Z component of the 3D vector.
+The Z component of a 3D vector.
 
 It returns the Z component of the 3D vector.
 """.
@@ -189,50 +179,39 @@ z({_, _, Z}) ->
     Z.
 
 -doc """
-A zero 3D vector.
+The zero 3D vector.
 
-It constructs a zero 3D vector.
+It constructs a zero 3D vector (all components set to 0.0).
+
+```erlang
+{0.0, 0.0, 0.0} = vector3:zero().
+```
+
+Note that the `?VECTOR3_ZERO` macro can be used instead.
 """.
 -spec zero() -> graphics:vector3().
 zero() ->
     {0.0, 0.0, 0.0}.
 
 -doc """
-To be written.
+Check whether a 3D vector is zero.
+
+It returns `true` when all components are zero. The values `+0.0` and `-0.0`
+are treated as equal.
 """.
 -spec is_zero(graphics:vector3()) -> boolean().
-is_zero({+0.0, +0.0, +0.0}) ->
-    true;
-is_zero({+0.0, +0.0, -0.0}) ->
-    true;
-is_zero({+0.0, -0.0, +0.0}) ->
-    true;
-is_zero({+0.0, -0.0, -0.0}) ->
-    true;
-is_zero({-0.0, +0.0, +0.0}) ->
-    true;
-is_zero({-0.0, +0.0, -0.0}) ->
-    true;
-is_zero({-0.0, -0.0, +0.0}) ->
-    true;
-is_zero({-0.0, -0.0, -0.0}) ->
-    true;
-is_zero(_Vector) ->
-    false.
+is_zero(Vector) ->
+    is_equal_to(Vector, zero()).
 
 -doc """
-To be written.
-""".
--spec unit(graphics:vector3()) -> graphics:vector3().
-unit(_Vector) ->
-    ok.
+Check whether a 3D vector is a unit vector.
 
--doc """
-To be written.
+It returns `true` when the length of the vector differs from 1.0 by at most
+1.0e-6.
 """.
 -spec is_unit(graphics:vector3()) -> boolean().
-is_unit(_Vector) ->
-    ok.
+is_unit(Vector) ->
+    erlang:abs(?MODULE:length(Vector) - 1.0) =< ?EPSILON.
 
 -doc """
 Compute the length of a 3D vector.
@@ -244,7 +223,17 @@ Note that it's also called the magnitude of the vector.
 """.
 -spec length(graphics:vector3()) -> float().
 length(Vector) ->
-    math:sqrt(dot_product(Vector, Vector)).
+    math:sqrt(length_squared(Vector)).
+
+-doc """
+Compute the squared length of a 3D vector.
+
+It computes the squared length of a 3D vector. This avoids a square root and is
+the preferred form when only comparing lengths.
+""".
+-spec length_squared(graphics:vector3()) -> float().
+length_squared(Vector) ->
+    dot_product(Vector, Vector).
 
 -doc """
 Normalize a 3D vector.
@@ -252,11 +241,13 @@ Normalize a 3D vector.
 It normalizes a 3D vector. The length of the vector is computed and the vector
 is divided by this length. The result is a vector with the same direction but
 with a length of 1.0.
+
+Normalizing a zero vector yields IEEE `inf` or `NaN`.
 """.
 -spec normalize(graphics:vector3()) -> graphics:vector3().
 normalize({X, Y, Z} = Vector) ->
-    Length = vector3:length(Vector),
-    {X/Length, Y/Length, Z/Length}.
+    Length = ?MODULE:length(Vector),
+    {X / Length, Y / Length, Z / Length}.
 
 -doc """
 Compute the dot product of two 3D vectors.
@@ -269,72 +260,139 @@ Note that this operation is also called the inner product.
 """.
 -spec dot_product(graphics:vector3(), graphics:vector3()) -> float().
 dot_product({X1, Y1, Z1}, {X2, Y2, Z2}) ->
-    X1*X2 + Y1*Y2 + Z1*Z2.
+    X1 * X2 + Y1 * Y2 + Z1 * Z2.
 
 -doc """
 Compute the cross product of two 3D vectors.
 
-It computes the cross product of two 3D vectors. The cross product is a vector
-that is perpendicular to the two vectors. The cross product is computed by
-multiplying the corresponding components of the two vectors and subtracting the
-result of the products of the other corresponding components.
+It computes the cross product of two 3D vectors. The result is a 3D vector
+perpendicular to both arguments. Its direction follows the right-hand rule.
 """.
--spec cross_product(graphics:vector3(), graphics:vector3()) ->
-    graphics:vector2()
-.
+-spec cross_product(graphics:vector3(), graphics:vector3()) -> graphics:vector3().
 cross_product({X1, Y1, Z1}, {X2, Y2, Z2}) ->
-    {Y1*Z2 - Z1*Y2, Z1*X2 - X1*Z2, X1*Y2 - Y1*X2}.
+    {Y1 * Z2 - Z1 * Y2, Z1 * X2 - X1 * Z2, X1 * Y2 - Y1 * X2}.
 
 -doc """
-To be written.
+Compute the distance between two 3D vectors.
+
+It computes the Euclidean distance between two 3D points.
 """.
 -spec distance(graphics:vector3(), graphics:vector3()) -> float().
-distance(_V1, _V2) ->
-    ok.
+distance(V1, V2) ->
+    ?MODULE:length(subtract(V2, V1)).
 
 -doc """
-To be written.
+Compute the squared distance between two 3D vectors.
+
+It computes the squared Euclidean distance between two 3D points. This avoids a
+square root and is the preferred form when only comparing distances.
+""".
+-spec distance_squared(graphics:vector3(), graphics:vector3()) -> float().
+distance_squared(V1, V2) ->
+    length_squared(subtract(V2, V1)).
+
+-doc """
+Compute the direction from one 3D vector to another.
+
+It returns the unit vector pointing from the first 3D vector to the second. If
+the two vectors are equal, the result is IEEE `inf` or `NaN`.
 """.
 -spec direction(graphics:vector3(), graphics:vector3()) -> graphics:vector3().
-direction(_V1, _V2) ->
-    ok.
+direction(From, To) ->
+    normalize(subtract(To, From)).
 
 -doc """
-To be written.
+Compute the unsigned angle between two 3D vectors.
+
+It computes the unsigned angle in radians between two 3D vectors. The result
+is in `[0, pi]`.
+""".
+-spec angle(graphics:vector3(), graphics:vector3()) -> graphics:angle().
+angle(V1, V2) ->
+    N1 = normalize(V1),
+    N2 = normalize(V2),
+    Dot = erlang:max(-1.0, erlang:min(1.0, dot_product(N1, N2))),
+    math:acos(Dot).
+
+-doc """
+Compute the signed angle from one 3D vector to another around an axis.
+
+It computes the signed angle in radians from the first 3D vector to the second,
+oriented around `Axis`. The result is in `[-pi, pi]`. The sign is positive
+when the shortest rotation follows the right-hand rule around `Axis`.
 """.
 -spec angle(graphics:vector3(), graphics:vector3(), graphics:vector3()) ->
     graphics:angle().
-angle(_V1, _V2, _Axis) ->
-    ok.
+angle(V1, V2, Axis) ->
+    Unsigned = angle(V1, V2),
+    case dot_product(Axis, cross_product(V1, V2)) < 0.0 of
+        true ->
+            -Unsigned;
+        false ->
+            Unsigned
+    end.
 
 -doc """
-To be written.
+Project a 3D vector onto another 3D vector.
+
+It projects the first 3D vector onto the second. The second vector does not
+need to be a unit vector. Projecting onto a zero vector yields IEEE `inf` or
+`NaN`.
 """.
 -spec project(graphics:vector3(), graphics:vector3()) -> graphics:vector3().
-project(_Vector, _Onto) ->
-    ok.
+project(Vector, Onto) ->
+    multiply(Onto, dot_product(Vector, Onto) / length_squared(Onto)).
 
 -doc """
-To be written.
+Rotate a 3D vector around an axis.
+
+It rotates a 3D vector around `Axis` by the given angle in radians, using
+Rodrigues' rotation formula. `Axis` is normalized internally. A zero axis
+yields IEEE `inf` or `NaN`.
 """.
 -spec rotate(graphics:vector3(), graphics:angle(), graphics:vector3()) ->
     graphics:vector3().
-rotate(_Vector, _Angle, _Axis) ->
-    ok.
+rotate(Vector, Angle, Axis) ->
+    Cos = math:cos(Angle),
+    Sin = math:sin(Angle),
+    K = normalize(Axis),
+    D = dot_product(K, Vector),
+    add(
+        add(multiply(Vector, Cos), multiply(cross_product(K, Vector), Sin)),
+        multiply(K, D * (1.0 - Cos))
+    ).
 
 -doc """
-To be written.
+Reflect a 3D vector.
+
+It reflects a 3D vector against a unit normal. The second argument is assumed
+to have length 1.0.
 """.
 -spec reflect(graphics:vector3(), graphics:vector3()) -> graphics:vector3().
-reflect(_Vector, _Axis) ->
-    ok.
+reflect(Vector, Normal) ->
+    subtract(Vector, multiply(Normal, 2.0 * dot_product(Vector, Normal))).
 
 -doc """
-To be written.
+Clamp the length of a 3D vector.
+
+It returns a 3D vector with the same direction whose length is clamped between
+`Min` and `Max`. `Min` and `Max` are non-negative and `Min =< Max`.
+
+A zero vector is returned unchanged, because it has no direction to scale.
 """.
 -spec clamp_length(graphics:vector3(), float(), float()) -> graphics:vector3().
-clamp_length(_Vector, _Min, _Max) ->
-    ok.
+clamp_length(Vector, Min, Max) ->
+    Length = ?MODULE:length(Vector),
+    if
+        Length == 0.0 ->
+            Vector;
+        Length < Min ->
+            multiply(Vector, Min / Length);
+        Length > Max ->
+            multiply(Vector, Max / Length);
+        true ->
+            Vector
+    end.
 
 -doc """
 Add a 3D vector to another 3D vector.
@@ -345,9 +403,7 @@ the second is V2, it does `V1 + V2`.
 
 Note that this operation is also called translation.
 """.
--spec add(graphics:vector3(), graphics:vector3()) ->
-    graphics:vector3()
-.
+-spec add(graphics:vector3(), graphics:vector3()) -> graphics:vector3().
 add({X1, Y1, Z1}, {X2, Y2, Z2}) ->
     {X1 + X2, Y1 + Y2, Z1 + Z2}.
 
@@ -360,18 +416,16 @@ denoted V1 and the second is V2, it does `V1 - V2`.
 
 Note that this operation is also called translation.
 """.
--spec subtract(graphics:vector3(), graphics:vector3()) ->
-    graphics:vector3()
-.
+-spec subtract(graphics:vector3(), graphics:vector3()) -> graphics:vector3().
 subtract({X1, Y1, Z1}, {X2, Y2, Z2}) ->
     {X1 - X2, Y1 - Y2, Z1 - Z2}.
 
 -doc """
 Multiply a 3D vector with a scalar.
 
-It multiplies a 3D vector with a scalar. If the vector is noted V and the
-scalar V, it does `S . V`. Because this operation is commutative, it's also
-equivalent to `V . S`.
+It multiplies a 3D vector with a scalar. If the vector is denoted V and the
+scalar S, it does `S * V`. Because this operation is commutative, it's also
+equivalent to `V * S`.
 
 Note that this operation is also called scaling.
 """.
@@ -380,32 +434,45 @@ multiply({X, Y, Z}, Factor) ->
     {Factor * X, Factor * Y, Factor * Z}.
 
 -doc """
-To be written.
+Divide a 3D vector by a scalar.
+
+It divides each component of a 3D vector by a scalar. Dividing by zero yields
+IEEE `inf` or `NaN`.
 """.
 -spec divide(graphics:vector3(), float()) -> graphics:vector3().
-divide({_X, _Y, _Z}, _Divider) ->
-    ok.
+divide({X, Y, Z}, Divider) ->
+    {X / Divider, Y / Divider, Z / Divider}.
 
 -doc """
-To be written.
+Negate a 3D vector.
+
+It returns the opposite of a 3D vector: `{X, Y, Z}` becomes `{-X, -Y, -Z}`.
 """.
 -spec negate(graphics:vector3()) -> graphics:vector3().
-negate({_X, _Y, _Z}) ->
-    ok.
+negate({X, Y, Z}) ->
+    {-X, -Y, -Z}.
 
 -doc """
-To be written.
+Check whether two 3D vectors are equal.
+
+It returns `true` when all components compare equal. The values `+0.0` and
+`-0.0` are treated as equal.
 """.
 -spec is_equal_to(graphics:vector3(), graphics:vector3()) -> boolean().
-is_equal_to(_V1, _V2) ->
-    ok.
+is_equal_to({X1, Y1, Z1}, {X2, Y2, Z2}) ->
+    X1 == X2 andalso Y1 == Y2 andalso Z1 == Z2.
 
 -doc """
-To be written.
+Check whether two 3D vectors are equal within an epsilon.
+
+It returns `true` when each pair of corresponding components differs by at
+most `Epsilon`.
 """.
 -spec is_equal_to(graphics:vector3(), graphics:vector3(), float()) -> boolean().
-is_equal_to(_V1, _V2, _Epsilon) ->
-    ok.
+is_equal_to({X1, Y1, Z1}, {X2, Y2, Z2}, Epsilon) ->
+    erlang:abs(X1 - X2) =< Epsilon
+        andalso erlang:abs(Y1 - Y2) =< Epsilon
+        andalso erlang:abs(Z1 - Z2) =< Epsilon.
 
 -doc """
 Reduce a 3D vector.
@@ -423,9 +490,7 @@ It computes the minimum of two 3D vectors. The minimum of two vectors is the
 vector where each component is the minimum of the corresponding components of
 the two vectors.
 """.
--spec min(graphics:vector3(), graphics:vector3()) ->
-    graphics:vector3()
-.
+-spec min(graphics:vector3(), graphics:vector3()) -> graphics:vector3().
 min({X1, Y1, Z1}, {X2, Y2, Z2}) ->
     {erlang:min(X1, X2), erlang:min(Y1, Y2), erlang:min(Z1, Z2)}.
 
@@ -436,21 +501,25 @@ It computes the maximum of two 3D vectors. The maximum of two vectors is the
 vector where each component is the maximum of the corresponding components of
 the two vectors.
 """.
--spec max(graphics:vector3(), graphics:vector3()) ->
-    graphics:vector3()
-.
+-spec max(graphics:vector3(), graphics:vector3()) -> graphics:vector3().
 max({X1, Y1, Z1}, {X2, Y2, Z2}) ->
     {erlang:max(X1, X2), erlang:max(Y1, Y2), erlang:max(Z1, Z2)}.
 
 -doc """
-To be written.
+Compute the absolute value of a 3D vector.
+
+It returns the 3D vector where each component is replaced by its absolute
+value.
 """.
 -spec abs(graphics:vector3()) -> graphics:vector3().
 abs({X, Y, Z}) ->
     {erlang:abs(X), erlang:abs(Y), erlang:abs(Z)}.
 
 -doc """
-To be written.
+Compute the floor of a 3D vector.
+
+It returns the 3D vector where each component is replaced by the greatest
+integer less than or equal to that component, as a float.
 """.
 -spec floor(graphics:vector3()) -> graphics:vector3().
 floor({X, Y, Z}) ->
@@ -461,7 +530,10 @@ floor({X, Y, Z}) ->
     }.
 
 -doc """
-To be written.
+Compute the ceiling of a 3D vector.
+
+It returns the 3D vector where each component is replaced by the least integer
+greater than or equal to that component, as a float.
 """.
 -spec ceil(graphics:vector3()) -> graphics:vector3().
 ceil({X, Y, Z}) ->
@@ -472,7 +544,10 @@ ceil({X, Y, Z}) ->
     }.
 
 -doc """
-To be written.
+Round a 3D vector.
+
+It returns the 3D vector where each component is rounded to the nearest
+integer, as a float.
 """.
 -spec round(graphics:vector3()) -> graphics:vector3().
 round({X, Y, Z}) ->
@@ -483,21 +558,11 @@ round({X, Y, Z}) ->
     }.
 
 -doc """
-To be written.
-""".
--spec to_angle(graphics:vector3(), graphics:vector3()) -> graphics:angle().
-to_angle({_X, _Y, _Z}, _Axis) ->
-    ok.
+Linearly interpolate two 3D vectors.
 
--doc """
-To be written.
-""".
--spec from_angle(graphics:angle(), graphics:vector3()) -> graphics:vector3().
-from_angle(_Angle, _Axis) ->
-    ok.
-
--doc """
-To be written.
+It interpolates from the first 3D vector to the second using `T`. When `T` is
+0.0 the result is the first vector, and when `T` is 1.0 the result is the
+second. `T` is not clamped, so values outside `[0.0, 1.0]` extrapolate.
 """.
 -spec lerp(graphics:vector3(), graphics:vector3(), float()) -> graphics:vector3().
 lerp({X1, Y1, Z1}, {X2, Y2, Z2}, T) ->
@@ -508,8 +573,12 @@ lerp({X1, Y1, Z1}, {X2, Y2, Z2}, T) ->
     }.
 
 -doc """
-To be written.
+Smoothly interpolate two 3D vectors.
+
+It interpolates from the first 3D vector to the second using the Hermite
+smoothstep `T * T * (3.0 - 2.0 * T)`, then `lerp/3`. `T` is not clamped.
 """.
--spec smooth_lerp(graphics:vector3(), graphics:vector3(), float()) -> graphics:vector3().
+-spec smooth_lerp(graphics:vector3(), graphics:vector3(), float()) ->
+    graphics:vector3().
 smooth_lerp(Vector1, Vector2, T) ->
     lerp(Vector1, Vector2, T * T * (3.0 - 2.0 * T)).

@@ -18,6 +18,7 @@ To be written.
     angle/0,
     vector2/0,
     vector3/0,
+    vector4/0,
     matrix3/0,
     matrix4/0,
     color/0,
@@ -62,8 +63,8 @@ A 2D vector.
 A pair of numbers typically used to represent 2D positions and directions in
 the Euclidean plane.
 
-Note that it defines operations with 3x3 matrices by assuming an invisible
-third component set to 0.0 (also called the homogeneous coordinate).
+Note that `matrix3:multiply_vector/2` treats a 2D vector as a point by assuming
+an invisible third component set to 1.0 (the homogeneous coordinate).
 """.
 -type vector2() :: {
     X :: float(),
@@ -76,8 +77,8 @@ A 3D vector.
 A triplet of numbers typically used to represent 3D positions and directions in
 the Euclidean space.
 
-Note that it defines operations with 4x4 matrices by assuming an invisible
-fourth component set to 0.0 (also called the homogeneous coordinate).
+Note that `matrix4:multiply_vector/2` treats a 3D vector as a point by assuming
+an invisible fourth component set to 1.0 (the homogeneous coordinate).
 """.
 -type vector3() :: {
     X :: float(),
@@ -86,12 +87,25 @@ fourth component set to 0.0 (also called the homogeneous coordinate).
 }.
 
 -doc """
+A 4-tuple of floats.
+
+It is the row and column type of a 4x4 matrix. It is not a general 4D vector
+API.
+""".
+-type vector4() :: {
+    X :: float(),
+    Y :: float(),
+    Z :: float(),
+    W :: float()
+}.
+
+-doc """
 A 3x3 matrix.
 
 A 3x3 grid of numbers typically used to represent 2D transformations in the
 Euclidean plane.
 
-column majoor order xxx
+The tuple is stored in column-major order (top-to-bottom, left-to-right).
 """.
 -type matrix3() :: {
     M11 :: float(),
@@ -111,7 +125,7 @@ A 4x4 matrix.
 A 4x4 grid of numbers typically used to represent 3D transformations in the
 Euclidean space.
 
-column majoor order xxx
+The tuple is stored in column-major order (top-to-bottom, left-to-right).
 """.
 -type matrix4() :: {
     M11 :: float(),
