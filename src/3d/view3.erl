@@ -9,24 +9,42 @@
 %%
 -module(view3).
 -moduledoc """
-To be written.
+3D View
 
-To be written.
+A 3D view is a 4x4 matrix that is typically used to represent an orthographic
+or perspective projection in the Euclidean space.
+
+There is no extra data structure. This module constructs 4x4 matrices that map
+a view-space volume to clip space. The matrix itself is a `graphics:matrix4()`
+value.
+
+```erlang
+M = view3:perspective(math:pi() / 4.0, 16.0 / 9.0, 0.1, 100.0).
+```
+
+The projection is right-handed with clip Z in `[-1, 1]`. `perspective/4` takes
+a vertical field of view in radians and an aspect ratio of width over height.
+`frustum/6` is the general asymmetric perspective. Y increases upward when
+Bottom is less than Top. Swap Bottom and Top to flip Y.
+
+The observer that chooses where that volume sits in the world is a separate
+value; see the `camera3` module.
+
+Beware that a well-formed 4x4 matrix always contains floats, not integers.
 """.
 
 -export([
-    orthographic/6, % Orthographic projection (left, right, bottom, top, near, far)
-    perspective/4,  % Perspective (fov_y, aspect, near, far)
-    look_at/3       % View matrix (eye, target, up vectors)
-]).
--export([
+    orthographic/6,
+    perspective/4,
     frustum/6
 ]).
 
 -doc """
-To be written.
+An orthographic 4x4 matrix.
 
-To be written.
+It constructs a 4x4 matrix that maps the box `Left` to `Right`, `Bottom` to
+`Top`, and `-Near` to `-Far` in view space to clip space. Y increases upward
+when `Bottom` is less than `Top`. Swap `Bottom` and `Top` to flip Y.
 """.
 -spec orthographic(
     Left :: float(),
@@ -37,12 +55,9 @@ To be written.
     Far :: float()
 ) -> graphics:matrix4().
 orthographic(Left, Right, Bottom, Top, Near, Far) ->
-    % Calculate matrix components
     Tx = -(Right + Left) / (Right - Left),
     Ty = -(Top + Bottom) / (Top - Bottom),
     Tz = -(Far + Near) / (Far - Near),
-
-    % Column-major order matrix
     {
         2.0 / (Right - Left), 0.0, 0.0, 0.0,
         0.0, 2.0 / (Top - Bottom), 0.0, 0.0,
@@ -51,70 +66,35 @@ orthographic(Left, Right, Bottom, Top, Near, Far) ->
     }.
 
 -doc """
-To be written.
+A perspective 4x4 matrix.
 
-To be written.
+It constructs a 4x4 matrix from a vertical field of view in radians, an aspect
+ratio of width over height, and the near and far distances. The projection is
+right-handed with clip Z in `[-1, 1]`.
 """.
 -spec perspective(
-    FovY :: float(),
+    FovY :: graphics:angle(),
     Aspect :: float(),
     Near :: float(),
     Far :: float()
 ) -> graphics:matrix4().
 perspective(FovY, Aspect, Near, Far) ->
-    % Calculate the focal length (f) from vertical FOV
     F = 1.0 / math:tan(FovY / 2.0),
-
-    % Depth calculation components
     RangeInv = 1.0 / (Near - Far),
-
-    % Column-major order matrix
     {
-        F / Aspect, 0.0, 0.0,                          0.0,
-        0.0,        F,   0.0,                          0.0,
-        0.0,        0.0, (Far + Near) * RangeInv,      -1.0,
-        0.0,        0.0, 2.0 * Far * Near * RangeInv,  0.0
+        F / Aspect, 0.0, 0.0, 0.0,
+        0.0, F, 0.0, 0.0,
+        0.0, 0.0, (Far + Near) * RangeInv, -1.0,
+        0.0, 0.0, 2.0 * Far * Near * RangeInv, 0.0
     }.
 
 -doc """
-To be written.
+A frustum 4x4 matrix.
 
-To be written.
-""".
--spec look_at(
-    Eye :: graphics:vector3(),
-    Target :: graphics:vector3(),
-    Up :: graphics:vector3()
-) -> graphics:matrix4().
-look_at(Eye, Target, Up) ->
-    % Calculate the forward vector (z-axis) and normalize it
-    {X, Y, Z} = vector3:subtract(Eye, Target),
-    ZAxis = vector3:normalize({X, Y, Z}),
-
-    % Calculate the right vector (x-axis)
-    XAxis = vector3:normalize(vector3:cross_product(Up, ZAxis)),
-
-    % Recalculate the orthonormal up vector (y-axis)
-    YAxis = vector3:cross_product(ZAxis, XAxis),
-
-    % Create the rotation/translation matrix
-    % Translation is -dot(eye, x), -dot(eye, y), -dot(eye, z)
-    NegEyeX = -vector3:dot_product(Eye, XAxis),
-    NegEyeY = -vector3:dot_product(Eye, YAxis),
-    NegEyeZ = -vector3:dot_product(Eye, ZAxis),
-
-    % Column-major order matrix
-    {
-        element(1, XAxis), element(1, YAxis), element(1, ZAxis), 0.0,
-        element(2, XAxis), element(2, YAxis), element(2, ZAxis), 0.0,
-        element(3, XAxis), element(3, YAxis), element(3, ZAxis), 0.0,
-        NegEyeX,           NegEyeY,           NegEyeZ,           1.0
-    }.
-
--doc """
-To be written.
-
-To be written.
+It constructs a 4x4 perspective matrix from the near-plane bounds `Left`,
+`Right`, `Bottom`, and `Top`, and the near and far distances. The projection
+is right-handed with clip Z in `[-1, 1]`. A symmetric frustum matches
+`perspective/4` for the equivalent field of view and aspect ratio.
 """.
 -spec frustum(
     Left :: float(),
@@ -125,4 +105,15 @@ To be written.
     Far :: float()
 ) -> graphics:matrix4().
 frustum(Left, Right, Bottom, Top, Near, Far) ->
-    ok.
+    A = 2.0 * Near / (Right - Left),
+    B = 2.0 * Near / (Top - Bottom),
+    C = (Right + Left) / (Right - Left),
+    D = (Top + Bottom) / (Top - Bottom),
+    E = -(Far + Near) / (Far - Near),
+    F = -2.0 * Far * Near / (Far - Near),
+    {
+        A, 0.0, 0.0, 0.0,
+        0.0, B, 0.0, 0.0,
+        C, D, E, -1.0,
+        0.0, 0.0, F, 0.0
+    }.

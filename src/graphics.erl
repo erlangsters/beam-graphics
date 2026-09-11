@@ -275,18 +275,29 @@ To be written.
 -type shape3() :: #shape3{}.
 
 -doc """
-To be written.
+A 2D camera.
 
-To be written.
+A center, a rotation, and a zoom typically used to represent an observer in
+the Euclidean plane. Rotation is an angle in radians. Zoom `1.0` is no zoom.
 """.
--type camera2() :: term().
+-type camera2() :: {
+    Center :: vector2(),
+    Rotation :: angle(),
+    Zoom :: float()
+}.
 
 -doc """
-To be written.
+A 3D camera.
 
-To be written.
+A position, a target, and an up vector typically used to represent an observer
+in the Euclidean space. The camera sits at the position and looks at the
+target.
 """.
--type camera3() :: term().
+-type camera3() :: {
+    Position :: vector3(),
+    Target :: vector3(),
+    Up :: vector3()
+}.
 
 -doc """
 To be written.
