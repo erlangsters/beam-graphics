@@ -16,8 +16,8 @@ transformations in the Euclidean space.
 
 > While 4x4 matrices are powerful, manually constructing them for
 > transformations can be error-prone. For common 3D operations
-> (e.g., translation, rotation), prefer the `transform3` API, which wraps a
-> 4x4 matrix in a more ergonomic interface.
+> (e.g., translation, rotation, scale), prefer the `transform3` API, which
+> constructs 4x4 matrices for those operations.
 
 The data structure of a 4x4 matrix simply is a flat tuple of 16 floats in
 column-major order (top-to-bottom, left-to-right). Therefore, 4x4 matrices can

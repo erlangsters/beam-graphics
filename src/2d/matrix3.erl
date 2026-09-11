@@ -16,8 +16,8 @@ transformations in the Euclidean plane.
 
 > While 3x3 matrices are powerful, manually constructing them for
 > transformations can be error-prone. For common 2D operations
-> (e.g., translation, rotation), prefer the `transform2` API, which wraps a
-> 3x3 matrix in a more ergonomic interface.
+> (e.g., translation, rotation, scale), prefer the `transform2` API, which
+> constructs 3x3 matrices for those operations.
 
 The data structure of a 3x3 matrix simply is a flat tuple of 9 floats in
 column-major order (top-to-bottom, left-to-right). Therefore, 3x3 matrices can

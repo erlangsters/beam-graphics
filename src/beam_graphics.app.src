@@ -13,7 +13,6 @@
         matrix3, matrix4,
         box2, box3,
         transform2, transform3,
-        transformable2, transformable3,
         view2, view3,
         color,
         graphics_context,

@@ -78,8 +78,8 @@ rendering.
 Many part of the API naturally expects a matrix, such as when you draw
 vertices or when setting the view of a surface.
 
-However, to make it easy, `transform2` wraps a matrix 3x3 , and `view2` wraps
-a matrix 3x3.
+However, to make it easy, `transform2` constructs 3x3 matrices for common
+translation, rotation, and scale operations.
 
 ```erlang
 matrix3:new().
@@ -123,12 +123,10 @@ To be written.
 ### The 2D transformations
 
 At some point 2D transformation must be specified. The raw solution to this is
-Matrix 3x3. But it's an intuitive. The solution to this is 2d transformation.
+a 3x3 matrix. `transform2` constructs those matrices for common operations.
 
 ```erlang
-T = transform2:new(),
-T2 = transform2:translate(T, {50, -100}).
-M = transform2:matrix().
+M = transform2:translate(matrix3:identity(), {50.0, -100.0}).
 ```
 
 ### The 2D view
@@ -206,15 +204,9 @@ However, to the average programmer, it's hard to
 compute the 3x3 matrix by hand, instead use `transform2`.
 
 ```erlang
-T = transform2:new().
-```
-
-To be written.
-
-```erlang
-T1 = transform2:move({50, 100}).
+T1 = transform2:translation({50.0, 100.0}).
 surface:draw(S, V, T1).
-T2 = transform2:move({50, 100}).
+T2 = transform2:compose({100.0, 50.0}, math:pi() / 4.0, {2.0, 2.0}).
 surface:draw(S, V, T2).
 ```
 

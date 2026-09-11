@@ -9,14 +9,52 @@
 %%
 -module(transform3).
 -moduledoc """
-To be written.
+3D Transform
 
-To be written.
+A 3D transform is a 4x4 matrix that is typically used to represent translation,
+rotation, and scale in the Euclidean space.
+
+There is no extra data structure. This module constructs 4x4 matrices for those
+operations and applies them to points, directions, vertices, and boxes. The
+matrix itself is a `graphics:matrix4()` value; see the `matrix4` module for
+linear algebra.
+
+```erlang
+M = transform3:translation({10.0, 20.0, 30.0}).
+{11.0, 22.0, 33.0} = transform3:transform_point(M, {1.0, 2.0, 3.0}).
+```
+
+To compose several operations, either multiply matrices or use the combinators,
+which post-multiply so the new operation runs in local space.
+
+```erlang
+M1 = transform3:translate(matrix4:identity(), {10.0, 0.0, 0.0}),
+M2 = transform3:rotate(M1, math:pi() / 2.0, {0.0, 0.0, 1.0}).
+```
+
+For the common origin, position, rotation, and scale case, use `compose/3` or
+`compose/4`. A point is first moved so the origin is at zero, then scaled, then
+rotated, then moved to the position. Rotation is `{Angle, Axis}`.
+
+Rotation uses Rodrigues' formula around the given axis, matching
+`vector3:rotate/3`. The axis is normalized internally. A zero axis yields IEEE
+`inf` or `NaN`. Angles are in radians.
+
+Beware that a well-formed 4x4 matrix always contains floats, not integers.
 """.
+
 -export([
     translation/1,
     rotation/2,
     scale/1
+]).
+-export([
+    translate/2,
+    rotate/3,
+    scale/2
+]).
+-export([
+    compose/3, compose/4
 ]).
 -export([
     transform_point/2,
@@ -28,93 +66,208 @@ To be written.
 ]).
 
 -doc """
-To be written.
+A translation 4x4 matrix.
 
-To be written.
+It constructs a 4x4 matrix that translates by the given 3D vector.
+
+```erlang
+{11.0, 22.0, 33.0} = transform3:transform_point(
+    transform3:translation({10.0, 20.0, 30.0}),
+    {1.0, 2.0, 3.0}
+).
+```
 """.
 -spec translation(graphics:vector3()) -> graphics:matrix4().
-translation({OffsetX, OffsetY, OffsetZ}) ->
+translation({X, Y, Z}) ->
     {
         1.0, 0.0, 0.0, 0.0,
         0.0, 1.0, 0.0, 0.0,
         0.0, 0.0, 1.0, 0.0,
-        OffsetX, OffsetY, OffsetZ, 1.0
+        X,   Y,   Z,   1.0
     }.
 
 -doc """
-To be written.
+A rotation 4x4 matrix.
 
-To be written.
+It constructs a 4x4 matrix that rotates around `Axis` by the given angle in
+radians, using Rodrigues' rotation formula. `Axis` is normalized internally. A
+zero axis yields IEEE `inf` or `NaN`. The rotation matches `vector3:rotate/3`.
 """.
 -spec rotation(graphics:angle(), graphics:vector3()) -> graphics:matrix4().
-rotation(_Angle, _Axis) ->
-    ok.
-
--doc """
-To be written.
-
-To be written.
-""".
--spec scale(graphics:vector3()) -> graphics:matrix4().
-scale({FactorX, FactorY, FactorZ}) ->
+rotation(Angle, Axis) ->
+    Cos = math:cos(Angle),
+    Sin = math:sin(Angle),
+    T = 1.0 - Cos,
+    {Kx, Ky, Kz} = vector3:normalize(Axis),
+    R11 = T * Kx * Kx + Cos,
+    R12 = T * Kx * Ky - Sin * Kz,
+    R13 = T * Kx * Kz + Sin * Ky,
+    R21 = T * Kx * Ky + Sin * Kz,
+    R22 = T * Ky * Ky + Cos,
+    R23 = T * Ky * Kz - Sin * Kx,
+    R31 = T * Kx * Kz - Sin * Ky,
+    R32 = T * Ky * Kz + Sin * Kx,
+    R33 = T * Kz * Kz + Cos,
     {
-        FactorX, 0.0, 0.0, 0.0,
-        0.0, FactorY, 0.0, 0.0,
-        0.0, 0.0, FactorZ, 0.0,
+        R11, R21, R31, 0.0,
+        R12, R22, R32, 0.0,
+        R13, R23, R33, 0.0,
         0.0, 0.0, 0.0, 1.0
     }.
 
 -doc """
-To be written.
+A scale 4x4 matrix.
 
-To be written.
+It constructs a 4x4 matrix that scales by the given 3D vector.
+
+```erlang
+{2.0, 6.0, 12.0} = transform3:transform_point(
+    transform3:scale({2.0, 3.0, 4.0}),
+    {1.0, 2.0, 3.0}
+).
+```
+""".
+-spec scale(graphics:vector3()) -> graphics:matrix4().
+scale({X, Y, Z}) ->
+    {
+        X,   0.0, 0.0, 0.0,
+        0.0, Y,   0.0, 0.0,
+        0.0, 0.0, Z,   0.0,
+        0.0, 0.0, 0.0, 1.0
+    }.
+
+-doc """
+Translate a 4x4 matrix.
+
+It post-multiplies a 4x4 matrix by a translation. The translation runs in the
+matrix's local space.
+""".
+-spec translate(graphics:matrix4(), graphics:vector3()) -> graphics:matrix4().
+translate(Matrix, Vector) ->
+    matrix4:multiply(Matrix, translation(Vector)).
+
+-doc """
+Rotate a 4x4 matrix.
+
+It post-multiplies a 4x4 matrix by a rotation around `Axis`. The rotation runs
+in the matrix's local space and matches `vector3:rotate/3`.
+""".
+-spec rotate(graphics:matrix4(), graphics:angle(), graphics:vector3()) ->
+    graphics:matrix4().
+rotate(Matrix, Angle, Axis) ->
+    matrix4:multiply(Matrix, rotation(Angle, Axis)).
+
+-doc """
+Scale a 4x4 matrix.
+
+It post-multiplies a 4x4 matrix by a scale transform. The scale runs in the
+matrix's local space.
+""".
+-spec scale(graphics:matrix4(), graphics:vector3()) -> graphics:matrix4().
+scale(Matrix, Vector) ->
+    matrix4:multiply(Matrix, scale(Vector)).
+
+-doc """
+Compose a 3D transform from position, rotation, and scale.
+
+It constructs the 4x4 matrix that scales, then rotates, then translates. The
+origin is `{0.0, 0.0, 0.0}`. Rotation is `{Angle, Axis}`.
+""".
+-spec compose(
+    graphics:vector3(),
+    {graphics:angle(), graphics:vector3()},
+    graphics:vector3()
+) -> graphics:matrix4().
+compose(Position, Rotation, Scale) ->
+    compose(vector3:zero(), Position, Rotation, Scale).
+
+-doc """
+Compose a 3D transform from origin, position, rotation, and scale.
+
+It constructs the 4x4 matrix `T(Position) * R * S * T(-Origin)`. A point is
+first moved so the origin is at zero, then scaled, then rotated, then moved to
+the position. Rotation is `{Angle, Axis}`.
+""".
+-spec compose(
+    graphics:vector3(),
+    graphics:vector3(),
+    {graphics:angle(), graphics:vector3()},
+    graphics:vector3()
+) -> graphics:matrix4().
+compose(Origin, Position, {Angle, Axis}, Scale) ->
+    matrix4:multiply(
+        translation(Position),
+        matrix4:multiply(
+            rotation(Angle, Axis),
+            matrix4:multiply(
+                scale(Scale),
+                translation(vector3:negate(Origin))
+            )
+        )
+    ).
+
+-doc """
+Transform a 3D point.
+
+It transforms a 3D point by a 4x4 matrix. The point is treated as a homogeneous
+vector `{X, Y, Z, 1.0}`. If the resulting W component is not 1.0, the XYZ
+result is divided by W.
+
+This is the same computation as `matrix4:multiply_vector/2`.
 """.
 -spec transform_point(graphics:matrix4(), graphics:vector3()) ->
     graphics:vector3().
-transform_point(_Matrix, _Point) ->
-    ok.
+transform_point(Matrix, Point) ->
+    matrix4:multiply_vector(Matrix, Point).
 
 -doc """
-To be written.
+Transform a 3D direction.
 
-To be written.
+It transforms a 3D direction by the linear part of a 4x4 matrix. Translation is
+ignored. This is not a correct normal transform when the scale is non-uniform.
 """.
 -spec transform_direction(graphics:matrix4(), graphics:vector3()) ->
     graphics:vector3().
-transform_direction(_Matrix, _Direction) ->
-    ok.
+transform_direction({
+    M11, M21, M31, _,
+    M12, M22, M32, _,
+    M13, M23, M33, _,
+    _, _, _, _
+}, {X, Y, Z}) ->
+    {
+        M11 * X + M12 * Y + M13 * Z,
+        M21 * X + M22 * Y + M23 * Z,
+        M31 * X + M32 * Y + M33 * Z
+    }.
 
 -doc """
-To be written.
+Transform a 3D vertex.
 
-To be written.
+It transforms the position of a 3D vertex by a 4x4 matrix. The color and UV
+coordinates are left unchanged.
 """.
 -spec transform_vertex(graphics:matrix4(), graphics:vertex3()) ->
     graphics:vertex3().
-transform_vertex(Matrix, {{X, Y, Z}, Color, U, V}) ->
-    W = 1, % Homogeneous coordinate
-    
-    % Matrix is in column-major order, so we access elements accordingly
-    X2 = X*element(1, Matrix) + Y*element(5, Matrix) + Z*element(9, Matrix) + W*element(13, Matrix),
-    Y2 = X*element(2, Matrix) + Y*element(6, Matrix) + Z*element(10, Matrix) + W*element(14, Matrix),
-    Z2 = X*element(3, Matrix) + Y*element(7, Matrix) + Z*element(11, Matrix) + W*element(15, Matrix),
-    W2 = X*element(4, Matrix) + Y*element(8, Matrix) + Z*element(12, Matrix) + W*element(16, Matrix),
-    
-    % Perspective division if W2 is not 1
-    {NewX, NewY, NewZ} = if
-        W2 =:= 1.0 ->
-            {X2, Y2, Z2};
-        true ->
-            {X2/W2, Y2/W2, Z2/W2}
-    end,
-    {{NewX, NewY, NewZ}, Color, U, V}.
+transform_vertex(Matrix, {Position, Color, U, V}) ->
+    {transform_point(Matrix, Position), Color, U, V}.
 
 -doc """
-To be written.
+Transform a 3D box.
 
-To be written.
+It transforms every corner of a 3D box as a point and returns the axis-aligned
+bounding box of the result. A rotated box is a larger axis-aligned box, not a
+rotated rectangular prism.
 """.
 -spec transform_box(graphics:matrix4(), graphics:box3()) ->
     graphics:box3().
-transform_box(_Matrix, _Box) ->
-    ok.
+transform_box(Matrix, {{MinX, MinY, MinZ}, {MaxX, MaxY, MaxZ}}) ->
+    Corners = [
+        {MinX, MinY, MinZ}, {MaxX, MinY, MinZ},
+        {MinX, MaxY, MinZ}, {MaxX, MaxY, MinZ},
+        {MinX, MinY, MaxZ}, {MaxX, MinY, MaxZ},
+        {MinX, MaxY, MaxZ}, {MaxX, MaxY, MaxZ}
+    ],
+    [First | Rest] = [transform_point(Matrix, Corner) || Corner <- Corners],
+    lists:foldl(fun(Point, {Min, Max}) ->
+        {vector3:min(Min, Point), vector3:max(Max, Point)}
+    end, {First, First}, Rest).
