@@ -28,6 +28,7 @@ To be written.
 -export_type([
     vertex2/0, vertex3/0,
     mesh2/0, mesh3/0,
+    image/0,
     texture/0,
     program/0
 ]).
@@ -235,9 +236,21 @@ Use the `mesh3` module to create and manipulate 3D meshes.
 -type mesh3() :: mesh3:object().
 
 -doc """
-To be written.
+A texture image.
 
-To be written.
+A width, a height, and a row-major list of RGBA colors typically used as the
+CPU-side payload of a texture.
+
+Use the `texture` module to create and manipulate textures from an image.
+""".
+-type image() :: texture:image().
+
+-doc """
+Texture object.
+
+A 2D array of pixels that can be sampled when rendering a mesh.
+
+Use the `texture` module to create and manipulate textures.
 """.
 -type texture() :: texture:object().
 
