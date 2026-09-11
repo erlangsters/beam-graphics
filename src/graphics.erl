@@ -262,9 +262,11 @@ To be written.
 -type program() :: program:object().
 
 -doc """
-To be written.
+A mesh primitive type.
 
-To be written.
+It selects how consecutive vertices are assembled when a mesh is drawn:
+points, lines, a line strip, a line loop, triangles, a triangle strip, or a
+triangle fan.
 """.
 -type primitive_type() ::
     points |
@@ -277,23 +279,33 @@ To be written.
 .
 
 -doc """
-To be written.
+A vertex draw count.
 
-To be written.
+It is the number of vertices consumed by a draw call. On a shape, it is stored
+per mesh and is not necessarily `mesh2:vertex_count/1` or
+`mesh3:vertex_count/1`.
 """.
 -type vertex_count() :: non_neg_integer().
 
 -doc """
-To be written.
+A 2D shape.
 
-To be written.
+A collection of 2D meshes, a 3x3 model matrix, and an optional texture
+typically used as a drawable 2D object.
+
+The data structure is the `#shape2{}` record. Use the `shape2` module to create
+and manipulate 2D shapes.
 """.
 -type shape2() :: #shape2{}.
 
 -doc """
-To be written.
+A 3D shape.
 
-To be written.
+A collection of 3D meshes, a 4x4 model matrix, and an optional texture
+typically used as a drawable 3D object.
+
+The data structure is the `#shape3{}` record. Use the `shape3` module to create
+and manipulate 3D shapes.
 """.
 -type shape3() :: #shape3{}.
 
