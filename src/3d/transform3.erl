@@ -292,14 +292,5 @@ rotated rectangular prism.
 """.
 -spec transform_box(graphics:matrix4(), graphics:box3()) ->
     graphics:box3().
-transform_box(Matrix, {{MinX, MinY, MinZ}, {MaxX, MaxY, MaxZ}}) ->
-    Corners = [
-        {MinX, MinY, MinZ}, {MaxX, MinY, MinZ},
-        {MinX, MaxY, MinZ}, {MaxX, MaxY, MinZ},
-        {MinX, MinY, MaxZ}, {MaxX, MinY, MaxZ},
-        {MinX, MaxY, MaxZ}, {MaxX, MaxY, MaxZ}
-    ],
-    [First | Rest] = [transform_point(Matrix, Corner) || Corner <- Corners],
-    lists:foldl(fun(Point, {Min, Max}) ->
-        {vector3:min(Min, Point), vector3:max(Max, Point)}
-    end, {First, First}, Rest).
+transform_box(Matrix, Box) ->
+    box3:from_points([transform_point(Matrix, Corner) || Corner <- box3:corners(Box)]).

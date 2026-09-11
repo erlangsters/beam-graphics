@@ -159,9 +159,11 @@ To be written.
 }.
 
 -doc """
-To be written.
+A 2D box.
 
-To be written.
+A pair of 2D vectors typically used to represent an axis-aligned rectangle in
+the Euclidean plane. The first vector is the minimum corner and the second is
+the maximum corner.
 """.
 -type box2() :: {
     Min :: vector2(),
@@ -169,9 +171,11 @@ To be written.
 }.
 
 -doc """
-To be written.
+A 3D box.
 
-To be written.
+A pair of 3D vectors typically used to represent an axis-aligned rectangular
+prism in the Euclidean space. The first vector is the minimum corner and the
+second is the maximum corner.
 """.
 -type box3() :: {
     Min :: vector3(),

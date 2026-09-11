@@ -115,7 +115,7 @@ box2:from_vertices(V).
 To be written.
 
 ```erlang
-box2:intersect(B1, B2).
+box2:intersects(B1, B2).
 ```
 
 To be written.

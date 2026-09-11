@@ -9,57 +9,153 @@
 %%
 -module(box2_test).
 -include_lib("eunit/include/eunit.hrl").
+-include_lib("beam_graphics/include/graphics.hrl").
+
+-define(EPS, 1.0e-6).
 
 box2_test() ->
-    % B = #box2{},
-    % {0.0, 0.0} = B#box2.min,
-    % {0.0, 0.0} = B#box2.max,
-
+    Box = {{1.0, 2.0}, {5.0, 6.0}},
+    {1.0, 2.0} = box2:min(Box),
+    {5.0, 6.0} = box2:max(Box),
     ok.
 
 box2_from_points_test() ->
-    % Points = [
-    %     {1.0, 2.0},
-    %     {3.0, 4.0},
-    %     {5.0, 6.0}
-    % ],
-    % Box = box2:from_points(Points),
-    % {1.0, 2.0} = Box#box2.min,
-    % {5.0, 6.0} = Box#box2.max,
-
+    {{1.0, 2.0}, {5.0, 6.0}} = box2:from_points([
+        {1.0, 2.0},
+        {5.0, 6.0},
+        {3.0, 4.0}
+    ]),
+    {{3.0, 4.0}, {3.0, 4.0}} = box2:from_points([{3.0, 4.0}]),
+    {{1.0, 2.0}, {5.0, 6.0}} = box2:from_points([{5.0, 2.0}, {1.0, 6.0}]),
     ok.
 
 box2_from_vertices_test() ->
-    % Vertices = [
-    %     #vertex2{position = {1.0, 2.0}},
-    %     #vertex2{position = {3.0, 4.0}},
-    %     #vertex2{position = {5.0, 6.0}}
-    % ],
-    % Box = box2:from_vertices(Vertices),
-    % {1.0, 2.0} = Box#box2.min,
-    % {5.0, 6.0} = Box#box2.max,
+    Vertices = [
+        {{1.0, 2.0}, {1.0, 0.0, 0.0, 1.0}, 0.0, 1.0},
+        {{5.0, 6.0}, {0.0, 1.0, 0.0, 1.0}, 1.0, 0.0},
+        {{3.0, 4.0}, {0.0, 0.0, 1.0, 1.0}, 0.5, 0.5}
+    ],
+    {{1.0, 2.0}, {5.0, 6.0}} = box2:from_vertices(Vertices),
+    ok.
 
+box2_from_center_size_test() ->
+    {{-5.0, -10.0}, {5.0, 10.0}} = box2:from_center_size(
+        {0.0, 0.0},
+        {10.0, 20.0}
+    ),
+    true = box2:is_equal_to(
+        box2:from_center_size({0.0, 0.0}, {10.0, 20.0}),
+        box2:from_center_size({0.0, 0.0}, {-10.0, 20.0})
+    ),
+    {{5.0, 6.0}, {5.0, 6.0}} = box2:from_center_size({5.0, 6.0}, {0.0, 0.0}),
+    ok.
+
+box2_center_test() ->
+    {5.0, 10.0} = box2:center({{0.0, 0.0}, {10.0, 20.0}}),
+    {3.0, 4.0} = box2:center({{3.0, 4.0}, {3.0, 4.0}}),
+    ok.
+
+box2_size_test() ->
+    {10.0, 20.0} = box2:size({{0.0, 0.0}, {10.0, 20.0}}),
+    {0.0, 0.0} = box2:size({{3.0, 4.0}, {3.0, 4.0}}),
+    ok.
+
+box2_area_test() ->
+    200.0 = box2:area({{0.0, 0.0}, {10.0, 20.0}}),
+    0.0 = box2:area({{3.0, 4.0}, {3.0, 4.0}}),
+    ok.
+
+box2_corners_test() ->
+    [
+        {1.0, 2.0}, {5.0, 2.0},
+        {1.0, 6.0}, {5.0, 6.0}
+    ] = box2:corners({{1.0, 2.0}, {5.0, 6.0}}),
+    Box = {{1.0, 2.0}, {5.0, 6.0}},
+    true = box2:is_equal_to(Box, box2:from_points(box2:corners(Box))),
     ok.
 
 box2_contains_test() ->
-    % B = #box2{min={0.0, 0.0}, max={1.0, 1.0}},
-    % true = box2:contains(B, {0.0, 0.0}),
-    % true = box2:contains(B, {1.0, 1.0}),
-    % true = box2:contains(B, {0.5, 0.5}),
-    % false = box2:contains(B, {-1.0, 0.0}),
-    % false = box2:contains(B, {0.0, -1.0}),
-    % false = box2:contains(B, {2.0, 0.0}),
-    % false = box2:contains(B, {0.0, 2.0}),
-    % false = box2:contains(B, {2.0, 2.0}),
-    % false = box2:contains(B, {-1.0, -1.0}),
-    % false = box2:contains(B, {2.0, 2.0}),
-
+    Box = {{0.0, 0.0}, {1.0, 1.0}},
+    true = box2:contains(Box, {0.5, 0.5}),
+    true = box2:contains(Box, {0.0, 0.0}),
+    true = box2:contains(Box, {1.0, 1.0}),
+    true = box2:contains(Box, {0.0, 0.5}),
+    true = box2:contains(Box, {1.0, 0.5}),
+    true = box2:contains(Box, {0.5, 0.0}),
+    true = box2:contains(Box, {0.5, 1.0}),
+    false = box2:contains(Box, {-0.1, 0.5}),
+    false = box2:contains(Box, {1.1, 0.5}),
+    false = box2:contains(Box, {0.5, -0.1}),
+    false = box2:contains(Box, {0.5, 1.1}),
     ok.
 
 box2_intersects_test() ->
-    % B1 = #box2{min={0.0, 0.0}, max={1.0, 1.0}},
-    % B2 = #box2{min={0.5, 0.5}, max={1.5, 1.5}},
-    % true = box2:intersects(B1, B2),
-    % true = box2:intersects(B2, B1),
+    Box = {{0.0, 0.0}, {1.0, 1.0}},
+    true = box2:intersects(Box, Box),
+    true = box2:intersects(Box, {{0.5, 0.5}, {1.5, 1.5}}),
+    true = box2:intersects({{0.5, 0.5}, {1.5, 1.5}}, Box),
+    true = box2:intersects(Box, {{1.0, 0.0}, {2.0, 1.0}}),
+    true = box2:intersects(Box, {{1.0, 1.0}, {2.0, 2.0}}),
+    false = box2:intersects(Box, {{2.0, 2.0}, {3.0, 3.0}}),
+    false = box2:intersects(Box, {{1.1, 0.0}, {2.0, 1.0}}),
+    ok.
 
+box2_intersection_test() ->
+    {ok, {{1.0, 1.0}, {2.0, 2.0}}} = box2:intersection(
+        {{0.0, 0.0}, {2.0, 2.0}},
+        {{1.0, 1.0}, {3.0, 3.0}}
+    ),
+    {ok, {{1.0, 0.0}, {1.0, 1.0}}} = box2:intersection(
+        {{0.0, 0.0}, {1.0, 1.0}},
+        {{1.0, 0.0}, {2.0, 1.0}}
+    ),
+    {ok, {{1.0, 1.0}, {1.0, 1.0}}} = box2:intersection(
+        {{0.0, 0.0}, {1.0, 1.0}},
+        {{1.0, 1.0}, {2.0, 2.0}}
+    ),
+    {error, disjoint} = box2:intersection(
+        {{0.0, 0.0}, {1.0, 1.0}},
+        {{2.0, 2.0}, {3.0, 3.0}}
+    ),
+    ok.
+
+box2_union_test() ->
+    {{0.0, 0.0}, {3.0, 3.0}} = box2:union(
+        {{0.0, 0.0}, {2.0, 2.0}},
+        {{1.0, 1.0}, {3.0, 3.0}}
+    ),
+    ok.
+
+box2_expand_test() ->
+    Box = {{0.0, 0.0}, {10.0, 10.0}},
+    true = box2:is_equal_to(Box, box2:expand(Box, {5.0, 5.0})),
+    {{0.0, 0.0}, {12.0, 10.0}} = box2:expand(Box, {12.0, 5.0}),
+    {{-1.0, 0.0}, {10.0, 10.0}} = box2:expand(Box, {-1.0, 5.0}),
+    ok.
+
+box2_translate_test() ->
+    {{10.0, 20.0}, {11.0, 22.0}} = box2:translate(
+        {{0.0, 0.0}, {1.0, 2.0}},
+        {10.0, 20.0}
+    ),
+    ok.
+
+box2_is_equal_to_test() ->
+    Box = {{0.0, 0.0}, {1.0, 1.0}},
+    true = box2:is_equal_to(Box, {{0.0, 0.0}, {1.0, 1.0}}),
+    true = box2:is_equal_to(
+        {{+0.0, -0.0}, {1.0, 1.0}},
+        {{-0.0, +0.0}, {1.0, 1.0}}
+    ),
+    false = box2:is_equal_to(Box, {{0.0, 0.0}, {1.0, 2.0}}),
+    true = box2:is_equal_to(Box, {{0.0, 0.0}, {1.0, 1.0 + 1.0e-7}}, ?EPS),
+    false = box2:is_equal_to(Box, {{0.0, 0.0}, {1.0, 1.0 + 1.0e-5}}, ?EPS),
+    ok.
+
+box2_to_box3_test() ->
+    {{0.0, 0.0, 0.0}, {10.0, 20.0, 0.0}} = box2:to_box3(
+        {{0.0, 0.0}, {10.0, 20.0}}
+    ),
+    Box = {{1.0, 2.0}, {3.0, 4.0}},
+    true = box2:is_equal_to(Box, box3:to_box2(box2:to_box3(Box))),
     ok.

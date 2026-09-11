@@ -258,10 +258,5 @@ rotated rectangle.
 """.
 -spec transform_box(graphics:matrix3(), graphics:box2()) ->
     graphics:box2().
-transform_box(Matrix, {{MinX, MinY}, {MaxX, MaxY}}) ->
-    box2:from_points([
-        transform_point(Matrix, {MinX, MinY}),
-        transform_point(Matrix, {MaxX, MinY}),
-        transform_point(Matrix, {MinX, MaxY}),
-        transform_point(Matrix, {MaxX, MaxY})
-    ]).
+transform_box(Matrix, Box) ->
+    box2:from_points([transform_point(Matrix, Corner) || Corner <- box2:corners(Box)]).
