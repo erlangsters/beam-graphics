@@ -129,11 +129,7 @@ view and projection matrices.
     ResourceId :: {frame, gl:framebuffer(), gl:renderbuffer()},
     Size :: size(),
     Texture :: graphics:texture(),
-    Program :: {program:object(), {
-        ModelLocation :: gl:int(),
-        ViewLocation :: gl:int(),
-        ProjectionLocation :: gl:int()
-    }},
+    Program :: program:object(),
     Viewport :: viewport(),
     ViewMatrix :: graphics:matrix4(),
     ProjectionMatrix :: graphics:matrix4()
@@ -148,7 +144,7 @@ projection matrix is an orthographic projection of the size. The viewport is
 the full size.
 
 Width and height must be at least 1. It returns `out_of_memory` when the GPU
-cannot allocate the framebuffer or the color texture.
+cannot allocate the framebuffer, the color texture, or the default program.
 """.
 -spec with_size(size()) -> {ok, object()} | out_of_memory.
 with_size({Width, Height}) when Width > 0, Height > 0 ->
@@ -162,18 +158,30 @@ with_size({Width, Height}) when Width > 0, Height > 0 ->
                     ok = texture:destroy(Texture),
                     out_of_memory;
                 {ok, ResourceId} ->
-                    {Program, Locations} = default_program:make(Width, Height),
-                    ok = bind_default_texture_unit(Program),
-                    Frame = {
-                        ResourceId,
-                        {Width, Height},
-                        Texture,
-                        {Program, Locations},
-                        {0, 0, Width, Height},
-                        ?MATRIX4_IDENTITY,
-                        default_projection_matrix(Width, Height)
-                    },
-                    {ok, Frame}
+                    case default_program:new() of
+                        {ok, Program} ->
+                            Frame = {
+                                ResourceId,
+                                {Width, Height},
+                                Texture,
+                                Program,
+                                {0, 0, Width, Height},
+                                ?MATRIX4_IDENTITY,
+                                default_projection_matrix(Width, Height)
+                            },
+                            {ok, Frame};
+                        Error ->
+                            ok = release_frame(ResourceId),
+                            ok = texture:destroy(Texture),
+                            case Error of
+                                out_of_memory ->
+                                    out_of_memory;
+                                {compile_error, _, _} ->
+                                    error(Error);
+                                {link_error, _} ->
+                                    error(Error)
+                            end
+                    end
             end
     end.
 
@@ -186,7 +194,7 @@ it is destroyed has undefined behavior. Destroying the same frame twice is
 invalid.
 """.
 -spec destroy(object()) -> ok.
-destroy({ResourceId, _Size, Texture, {Program, _Locations}, _Viewport, _View, _Projection}) ->
+destroy({ResourceId, _Size, Texture, Program, _Viewport, _View, _Projection}) ->
     ok = release_frame(ResourceId),
     ok = texture:destroy(Texture),
     ok = program:destroy(Program),
@@ -392,7 +400,7 @@ draw_mesh2(
         {frame, Framebuffer, _Renderbuffer},
         _Size,
         _ColorTexture,
-        {Program, Locations},
+        Program,
         Viewport,
         ViewMatrix,
         ProjectionMatrix
@@ -404,16 +412,15 @@ draw_mesh2(
     Matrix3
 ) ->
     Buffer = mesh2:gl_object(Mesh),
-    Matrix4 = matrix3:to_matrix4(Matrix3),
-    {ModelLocation, ViewLocation, ProjectionLocation} = Locations,
+    ok = program:set_uniform(Program, "uModel", matrix3:to_matrix4(Matrix3)),
+    ok = program:set_uniform(Program, "uView", ViewMatrix),
+    ok = program:set_uniform(Program, "uProjection", ProjectionMatrix),
+    ok = program:set_uniform(Program, "uUseTexture", Texture =/= no_texture),
     ok = frame_draw(
         Framebuffer,
         Viewport,
         program:gl_object(Program),
-        {ModelLocation, ViewLocation, ProjectionLocation},
-        ViewMatrix,
-        ProjectionMatrix,
-        {{mesh2, Buffer}, PrimitiveType, VertexCount, Texture, matrix4:columns(Matrix4)}
+        {{mesh2, Buffer}, PrimitiveType, VertexCount, Texture}
     ),
     ok.
 
@@ -471,7 +478,7 @@ draw_mesh3(
         {frame, Framebuffer, _Renderbuffer},
         _Size,
         _ColorTexture,
-        {Program, Locations},
+        Program,
         Viewport,
         ViewMatrix,
         ProjectionMatrix
@@ -483,15 +490,15 @@ draw_mesh3(
     Matrix
 ) ->
     Buffer = mesh3:gl_object(Mesh),
-    {ModelLocation, ViewLocation, ProjectionLocation} = Locations,
+    ok = program:set_uniform(Program, "uModel", Matrix),
+    ok = program:set_uniform(Program, "uView", ViewMatrix),
+    ok = program:set_uniform(Program, "uProjection", ProjectionMatrix),
+    ok = program:set_uniform(Program, "uUseTexture", Texture =/= no_texture),
     ok = frame_draw(
         Framebuffer,
         Viewport,
         program:gl_object(Program),
-        {ModelLocation, ViewLocation, ProjectionLocation},
-        ViewMatrix,
-        ProjectionMatrix,
-        {{mesh3, Buffer}, PrimitiveType, VertexCount, Texture, matrix4:columns(Matrix)}
+        {{mesh3, Buffer}, PrimitiveType, VertexCount, Texture}
     ),
     ok.
 
@@ -534,10 +541,9 @@ draw_shape3(
     end, Meshes).
 
 frame_draw(
-    Framebuffer, Viewport, Program, Locations, ViewMatrix, ProjectionMatrix,
-    {Mesh, PrimitiveType, VertexCount, Texture, ModelMatrix}
+    Framebuffer, Viewport, Program,
+    {Mesh, PrimitiveType, VertexCount, Texture}
 ) ->
-    {ModelLocation, ViewLocation, ProjectionLocation} = Locations,
     ok = graphics_context:execute_commands(fun() ->
         ok = gl:bind_framebuffer(framebuffer, Framebuffer),
         {X, Y, Width, Height} = Viewport,
@@ -545,9 +551,7 @@ frame_draw(
         ok = gl:enable(depth_test),
 
         ok = gl:use_program(Program),
-        ok = gl:uniform_matrix(f, ModelLocation, ModelMatrix),
-        ok = gl:uniform_matrix(f, ViewLocation, matrix4:columns(ViewMatrix)),
-        ok = gl:uniform_matrix(f, ProjectionLocation, matrix4:columns(ProjectionMatrix)),
+        ok = gl:active_texture(texture0),
 
         {ok, [VertexArray]} = gl:gen_vertex_arrays(1),
         gl:bind_vertex_array(VertexArray),
@@ -584,12 +588,10 @@ frame_draw(
                 gl:enable_vertex_attrib_array(2)
         end,
 
-        {ok, UseTextureLocation} = gl:get_uniform_location(Program, "uUseTexture"),
         case Texture of
             no_texture ->
-                ok = gl:uniform(i, UseTextureLocation, 0);
+                ok;
             _ ->
-                ok = gl:uniform(i, UseTextureLocation, 1),
                 GlTexture = texture:gl_object(Texture),
                 ok = gl:bind_texture(texture_2d, GlTexture)
         end,
@@ -609,16 +611,6 @@ frame_draw(
         ok
     end),
     ok.
-
-bind_default_texture_unit(Program) ->
-    GlProgram = program:gl_object(Program),
-    graphics_context:execute_commands(fun() ->
-        ok = gl:use_program(GlProgram),
-        {ok, TextureLocation} = gl:get_uniform_location(GlProgram, "uTexture"),
-        ok = gl:uniform(i, TextureLocation, 0),
-        ok = gl:active_texture(texture0),
-        ok
-    end).
 
 default_projection_matrix(Width, Height) ->
     view3:orthographic(
