@@ -1065,6 +1065,9 @@ acquire_texture(Width, Height, Data, InternalFormat) ->
         ),
         case gl:get_error() of
             {ok, no_error} ->
+                % Shared surface contexts do not see the upload until this
+                % context finishes.
+                ok = gl:finish(),
                 ok = gl:bind_texture(texture_2d, none),
                 {ok, {texture, GlTexture}, ReleaseFun};
             {ok, out_of_memory} ->
@@ -1090,6 +1093,7 @@ set_texture_data(GlTexture, Width, Height, Data, InternalFormat) ->
         ),
         case gl:get_error() of
             {ok, no_error} ->
+                ok = gl:finish(),
                 ok = gl:bind_texture(texture_2d, none),
                 ok;
             {ok, out_of_memory} ->
