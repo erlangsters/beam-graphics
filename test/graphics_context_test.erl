@@ -12,202 +12,317 @@
 
 -define(INVALID_RESOURCE_ID, {abc, 9999}).
 
-graphics_context_test() ->
+start_graphics() ->
+    Display = egl:get_display(default_display),
+    {ok, {_, _}} = egl:initialize(Display),
+    Pid = case graphics_context:start(Display) of
+        {ok, Started} ->
+            Started;
+        already_spawned ->
+            ok = graphics_context:stop(),
+            {ok, Restarted} = graphics_context:start(Display),
+            Restarted
+    end,
+    {Display, Pid}.
+
+buffer_acquire_fun(NotifyPid) ->
+    fun() ->
+        {ok, [Buffer]} = gl:gen_buffers(1),
+        ok = gl:bind_buffer(array_buffer, Buffer),
+        ok = gl:bind_buffer(array_buffer, none),
+        ResourceId = {buffer, Buffer},
+        ReleaseFun = fun({buffer, ReleasedBuffer} = ReleasedId) ->
+            ok = gl:delete_buffers([ReleasedBuffer]),
+            NotifyPid ! {released, ReleasedId},
+            ok
+        end,
+        NotifyPid ! {acquired, ResourceId},
+        {ok, ResourceId, ReleaseFun}
+    end.
+
+graphics_context_start_test() ->
     Display = egl:get_display(default_display),
     {ok, {_, _}} = egl:initialize(Display),
 
-    {ok, GraphicsContext} = graphics_context:start(Display),
+    {ok, _Pid} = graphics_context:start(Display),
     already_spawned = graphics_context:start(Display),
     % XXX: Remove this after bug is fixed in spawn mode library.
     ok = receive
         {'DOWN', _, process, _, normal} -> ok
     end,
 
+    ok = graphics_context:stop(),
+    ok.
+
+graphics_context_inner_context_test() ->
+    {Display, _Pid} = start_graphics(),
+
     Context = graphics_context:inner_context(),
     {ok, opengl_api} = egl:query_context(Display, Context, context_client_type),
     {ok, 4} = egl:query_context(Display, Context, context_client_version),
 
-    {ok, GlVersion} = graphics_context:execute_commands(fun() ->
+    {ok, _Version} = graphics_context:execute_commands(fun() ->
         gl:get_string(version)
     end),
-    % XXX: match string (look for substring instead)
-    io:format(user, "OpenGL version: ~p~n", [GlVersion]),
+
+    ok = graphics_context:stop(),
+    ok.
+
+graphics_context_resource_test() ->
+    {_Display, _Pid} = start_graphics(),
+    Self = self(),
 
     Resources1 = graphics_context:inner_resources(),
     0 = maps:size(Resources1),
 
-    Self = self(),
-    ReleaseFun = fun({buffer, Buffer} = ResourceId) ->
-        ok = gl:delete_buffers([Buffer]),
-        Self ! {released_resource, ResourceId},
-        ok
+    {ok, ResourceId} = graphics_context:acquire_resource(
+        buffer_acquire_fun(Self)
+    ),
+    {acquired, ResourceId} = receive
+        {acquired, AcquiredId} ->
+            {acquired, AcquiredId}
     end,
-    AcquireFun = fun() ->
-        {ok, [Buffer]} = gl:gen_buffers(1),
-        Self ! {acquired_resource, {buffer, Buffer}},
-        {ok, {buffer, Buffer}, ReleaseFun}
-    end,
+    {buffer, Buffer} = ResourceId,
 
-    Pid = spawn_link(fun() ->
-        {ok, _ResourceId} = graphics_context:acquire_resource(AcquireFun),
-        link(GraphicsContext),
-        timer:sleep(5000)
+    {ok, true} = graphics_context:execute_commands(fun() ->
+        gl:is_buffer(Buffer)
     end),
-    {ok, ResourceId} = receive
-        {acquired_resource, ResourceId1_} ->
-            {ok, ResourceId1_}
-    end,
 
     Resources2 = graphics_context:inner_resources(),
     1 = maps:size(Resources2),
-    [ResourceId] = maps:keys(Resources2),
-    [Pid] = maps:values(Resources2),
+    #{ResourceId := Self} = Resources2,
 
-    process_flag(trap_exit, true),
-    ok = graphics_context:stop(),
-
-    {ok, ResourceId} = receive
-        {released_resource, ResourceId2_} ->
-            {ok, ResourceId2_}
+    ok = graphics_context:release_resource(ResourceId),
+    {released, ResourceId} = receive
+        {released, ReleasedId} ->
+            {released, ReleasedId}
     end,
+
+    {ok, false} = graphics_context:execute_commands(fun() ->
+        gl:is_buffer(Buffer)
+    end),
+
+    Resources3 = graphics_context:inner_resources(),
+    0 = maps:size(Resources3),
+
+    ok = graphics_context:stop(),
+    ok.
+
+graphics_context_invalid_resource_test() ->
+    {_Display, _Pid} = start_graphics(),
+
+    invalid_resource_id =
+        graphics_context:release_resource(?INVALID_RESOURCE_ID),
+    invalid_resource_id =
+        graphics_context:transfer_ownership(?INVALID_RESOURCE_ID, self()),
+
+    ok = graphics_context:stop(),
+    ok.
+
+graphics_context_duplicate_resource_test() ->
+    {_Display, _Pid} = start_graphics(),
+    Self = self(),
+
+    AcquireFun = fun() ->
+        {ok, [Buffer]} = gl:gen_buffers(1),
+        ok = gl:bind_buffer(array_buffer, Buffer),
+        ok = gl:bind_buffer(array_buffer, none),
+        ReleaseFun = fun(_) ->
+            ok = gl:delete_buffers([Buffer]),
+            Self ! {deleted, Buffer},
+            ok
+        end,
+        Self ! {created, Buffer},
+        {ok, {fixed, 1}, ReleaseFun}
+    end,
+
+    {ok, {fixed, 1}} = graphics_context:acquire_resource(AcquireFun),
+    Buffer1 = receive
+        {created, Created1} ->
+            Created1
+    end,
+
+    {error, already_acquired} = graphics_context:acquire_resource(AcquireFun),
+    Buffer2 = receive
+        {created, Created2} ->
+            Created2
+    end,
+    Buffer2 = receive
+        {deleted, Deleted2} ->
+            Deleted2
+    end,
+
+    {ok, true} = graphics_context:execute_commands(fun() ->
+        gl:is_buffer(Buffer1)
+    end),
+    {ok, false} = graphics_context:execute_commands(fun() ->
+        gl:is_buffer(Buffer2)
+    end),
+
+    Resources = graphics_context:inner_resources(),
+    1 = maps:size(Resources),
+    #{{fixed, 1} := Self} = Resources,
+
+    ok = graphics_context:release_resource({fixed, 1}),
+    Buffer1 = receive
+        {deleted, Deleted1} ->
+            Deleted1
+    end,
+
+    ok = graphics_context:stop(),
+    ok.
+
+graphics_context_owner_down_test() ->
+    {_Display, _Pid} = start_graphics(),
+    Self = self(),
+
+    Owner = spawn(fun() ->
+        {ok, _ResourceId} = graphics_context:acquire_resource(
+            buffer_acquire_fun(Self)
+        ),
+        receive
+            stop -> ok
+        end
+    end),
+    ResourceId = receive
+        {acquired, AcquiredId} ->
+            AcquiredId
+    end,
+    {buffer, Buffer} = ResourceId,
+
+    Resources1 = graphics_context:inner_resources(),
+    #{ResourceId := Owner} = Resources1,
+
+    {ok, true} = graphics_context:execute_commands(fun() ->
+        gl:is_buffer(Buffer)
+    end),
+
+    OwnerMonitor = monitor(process, Owner),
+    exit(Owner, kill),
     ok = receive
-        {'EXIT', GraphicsContext, normal} ->
+        {'DOWN', OwnerMonitor, process, Owner, _} ->
             ok
     end,
+    {released, ResourceId} = receive
+        {released, ReleasedId} ->
+            {released, ReleasedId}
+    end,
 
+    Resources2 = graphics_context:inner_resources(),
+    0 = maps:size(Resources2),
+
+    {ok, false} = graphics_context:execute_commands(fun() ->
+        gl:is_buffer(Buffer)
+    end),
+
+    ok = graphics_context:stop(),
     ok.
 
-graphics_context_resource_test() ->
-    % Display = egl:get_display(default_display),
-    % {ok, {_, _}} = egl:initialize(Display),
+graphics_context_transfer_test() ->
+    {_Display, _Pid} = start_graphics(),
+    Self = self(),
 
-    % {ok, _GraphicsContext} = graphics_context:start(Display),
+    Orig = spawn(fun() ->
+        {ok, _ResourceId} = graphics_context:acquire_resource(
+            buffer_acquire_fun(Self)
+        ),
+        receive
+            stop -> ok
+        end
+    end),
+    ResourceId = receive
+        {acquired, AcquiredId} ->
+            AcquiredId
+    end,
+    {buffer, Buffer} = ResourceId,
 
-    % Self = self(),
+    NewOwner = spawn(fun() ->
+        receive
+            stop -> ok
+        end
+    end),
+    ok = graphics_context:transfer_ownership(ResourceId, NewOwner),
+    #{ResourceId := NewOwner} = graphics_context:inner_resources(),
 
-    % Resources1 = graphics_context:inner_resources(),
-    % 0 = maps:size(Resources1),
+    OrigMonitor = monitor(process, Orig),
+    exit(Orig, kill),
+    ok = receive
+        {'DOWN', OrigMonitor, process, Orig, _} ->
+            ok
+    end,
+    #{ResourceId := NewOwner} = graphics_context:inner_resources(),
+    {ok, true} = graphics_context:execute_commands(fun() ->
+        gl:is_buffer(Buffer)
+    end),
 
-    % ReleaseFun = fun({buffer, Buffer}) ->
-    %     ok = gl:delete_buffers([Buffer]),
-    %     ok
-    % end,
-    % AcquireFun = fun() ->
-    %     {ok, [Buffer]} = gl:create_buffers(1),
-    %     {ok, {buffer, Buffer}, ReleaseFun}
-    % end,
-    % {ok, Resource} = graphics_context:acquire_resource(AcquireFun),
-    % {buffer, Buffer} = Resource,
+    NewOwnerMonitor = monitor(process, NewOwner),
+    exit(NewOwner, kill),
+    ok = receive
+        {'DOWN', NewOwnerMonitor, process, NewOwner, _} ->
+            ok
+    end,
+    {released, ResourceId} = receive
+        {released, ReleasedId} ->
+            {released, ReleasedId}
+    end,
 
-    % {ok, true} = graphics_context:execute_commands(fun() ->
-    %     gl:is_buffer(Buffer)
-    % end),
+    Resources = graphics_context:inner_resources(),
+    0 = maps:size(Resources),
+    {ok, false} = graphics_context:execute_commands(fun() ->
+        gl:is_buffer(Buffer)
+    end),
 
-    % Resources2 = graphics_context:inner_resources(),
-    % 1 = maps:size(Resources2),
-    % [{buffer, Buffer}] = maps:keys(Resources2),
-    % [Self] = maps:values(Resources2),
-
-    % graphics_context:release_resource(Resource),
-
-    % {ok, false} = graphics_context:execute_commands(fun() ->
-    %     gl:is_buffer(Buffer)
-    % end),
-
-    % Resources3 = graphics_context:inner_resources(),
-    % 0 = maps:size(Resources3),
-
-    % ok = graphics_context:stop(),
-
+    ok = graphics_context:stop(),
     ok.
 
-graphics_context_monitor_test() ->
-    % % Test if resources are monitored and released properly.
-    % Display = egl:get_display(default_display),
-    % {ok, {_, _}} = egl:initialize(Display),
+graphics_context_stop_releases_test() ->
+    {_Display, _Pid} = start_graphics(),
+    Self = self(),
 
-    % {ok, _GraphicsContext} = graphics_context:start(Display),
+    {ok, ResourceId} = graphics_context:acquire_resource(
+        buffer_acquire_fun(Self)
+    ),
+    {acquired, ResourceId} = receive
+        {acquired, AcquiredId} ->
+            {acquired, AcquiredId}
+    end,
 
-    % process_flag(trap_exit, true),
-
-    % ReleaseFun = fun({buffer, Buffer}) ->
-    %     ok = gl:delete_buffers([Buffer]),
-    %     ok
-    % end,
-    % AcquireFun = fun() ->
-    %     {ok, [Buffer]} = gl:create_buffers(1),
-    %     {ok, {buffer, Buffer}, ReleaseFun}
-    % end,
-    % Pid = spawn_link(fun() ->
-    %     {ok, Resource} = graphics_context:acquire_resource(AcquireFun),
-    %     timer:sleep(100),
-    %     exit({normal, Resource})
-    % end),
-    % timer:sleep(50),
-    % Resources1 = graphics_context:inner_resources(),
-    % 1 = maps:size(Resources1),
-    % [Resource] = maps:keys(Resources1),
-    % [Pid] = maps:values(Resources1),
-
-    % ok = receive
-    %     {'EXIT', Pid, {normal, Resource}} ->
-    %         ok
-    % end,
-
-    % Resources2 = graphics_context:inner_resources(),
-    % 0 = maps:size(Resources2),
-
-    % {buffer, Buffer} = Resource,
-    % {ok, false} = graphics_context:execute_commands(fun() ->
-    %     gl:is_buffer(Buffer)
-    % end),
-
-    % ok = graphics_context:stop(),
-
+    ok = graphics_context:stop(),
+    {released, ResourceId} = receive
+        {released, ReleasedId} ->
+            {released, ReleasedId}
+    end,
     ok.
 
-graphics_context_ownership_test() ->
-    % % Test if ownership transfer works correctly.
-    % Display = egl:get_display(default_display),
-    % {ok, {_, _}} = egl:initialize(Display),
+graphics_context_execute_commands_exception_test() ->
+    {_Display, _Pid} = start_graphics(),
 
-    % {ok, _GraphicsContext} = graphics_context:start(Display),
+    {error, {exception, error, foobar}} =
+        graphics_context:execute_commands(fun() ->
+            error(foobar)
+        end),
 
-    % process_flag(trap_exit, true),
+    {ok, _Version} = graphics_context:execute_commands(fun() ->
+        gl:get_string(version)
+    end),
 
-    % ReleaseFun = fun({buffer, Buffer}) ->
-    %     ok = gl:delete_buffers([Buffer]),
-    %     ok
-    % end,
-    % AcquireFun = fun() ->
-    %     {ok, [Buffer]} = gl:create_buffers(1),
-    %     {ok, {buffer, Buffer}, ReleaseFun}
-    % end,
-    % {ok, Resource} = graphics_context:acquire_resource(AcquireFun),
-    % {buffer, Buffer} = Resource,
+    ok = graphics_context:stop(),
+    ok.
 
-    % Pid = spawn_link(fun() ->
-    %     invalid_resource_id = graphics_context:transfer_ownership(?INVALID_RESOURCE_ID, self()),
-    %     ok = graphics_context:transfer_ownership(Resource, self()),
-    %     timer:sleep(100)
-    % end),
-    % timer:sleep(50),
-    % Resources1 = graphics_context:inner_resources(),
-    % 1 = maps:size(Resources1),
-    % #{Resource := Pid} = Resources1,
+graphics_context_acquire_exception_test() ->
+    {_Display, _Pid} = start_graphics(),
 
-    % ok = receive
-    %     {'EXIT', Pid, normal} ->
-    %         ok
-    % end,
+    {error, {exception, error, foobar}} =
+        graphics_context:acquire_resource(fun() ->
+            error(foobar)
+        end),
 
-    % Resources2 = graphics_context:inner_resources(),
-    % 0 = maps:size(Resources2),
+    Resources = graphics_context:inner_resources(),
+    0 = maps:size(Resources),
 
-    % {ok, false} = graphics_context:execute_commands(fun() ->
-    %     gl:is_buffer(Buffer)
-    % end),
+    {ok, _Version} = graphics_context:execute_commands(fun() ->
+        gl:get_string(version)
+    end),
 
-    % ok = graphics_context:stop(),
-
+    ok = graphics_context:stop(),
     ok.

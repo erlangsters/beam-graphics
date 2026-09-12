@@ -9,103 +9,42 @@
 %%
 -module(graphics_context).
 -moduledoc """
-The root graphics context.
+Graphics Context
 
-It's a background process that holds an OpenGL context which is shared with the
-OpenGL context of all `graphics:surface/0` objects. It's responsible for
-creating, manipulating, and destroying OpenGL resources such as buffers and
-textures which are shareable resources (and therefore can be used by all
-surfaces).
+The graphics context is the root GPU process that holds the shared OpenGL
+context and the shareable GPU resources.
 
-> The OpenGL context is always active within the process. The sole responsibility
-> of the process is to handle OpenGL resources and operations, and frees up
-> when process owning them die.
-
-The root graphics context serves as the foundation of the graphics library
-and therefore must be started before any other graphics-related operations can
-take place.
+It is a singleton. It is started with `start/1` and stopped with `stop/0`.
+The calling process is linked to it. `graphics:initialize/1` starts it.
 
 ```erlang
-ok = graphics_context:start().
+Display = egl:get_display(default_display),
+{ok, {_, _}} = egl:initialize(Display),
+{ok, _Pid} = graphics_context:start(Display).
 ```
 
-Note that it's done by the `graphics:initialize/0` function (which should be
-used instead).
+Meshes, textures, programs, and frames are created on this context. Surfaces
+create their own OpenGL contexts that share with this one. There is one
+graphics context for both 2D and 3D drawing.
 
-To access the inner OpenGL context, use the `graphics_context:inner_context/0`
-function.
+A GPU resource is acquired with `acquire_resource/1`. The calling process
+becomes the owner. If that process dies, the resource is released.
+`transfer_ownership/2` changes the owner without destroying the GPU object.
+Copying a resource term does not copy the GPU object. Anyone who has the
+resource id may release or transfer it.
 
 ```erlang
-{ok, Context} = graphics_context:inner_context(),
-```
-
-Unless you intend to use your own OpenGL calls, you do not need to retrieve
-the inner OpenGL context. (rephrase).
-
-Later...
-
-```
 ok = graphics_context:stop().
 ```
 
-It's indirectly performed by the `graphics:terminate/0` function.
+`stop/0` releases remaining resources. Using them afterwards has undefined
+behavior. Owners are not killed. `graphics:terminate/0` stops it.
 
-**OpenGL resources and ownership**
+**OpenGL Internals**
 
-The sole responsibility of the process is to holds shared OpenGL resources
-which implies a dependency of those resources on the root graphics context.
-
-**About "mesh" operations**
-
-To be written.
-
-**About "texture" operations**
-
-The texture-related functions allow to create, manipulate, and destroy OpenGL
-textures (on the root OpenGL context). Together, those functions allow the
-implementation of the `graphics:texture/0` object.
-
-- `texture_new/3` - Create an OpenGL texture (and initialize it, first allocation).
-- `texture_set_data/3` - Set the data of an OpenGL texture (re-allocation).
-- `texture_data/3` - Read the data (or a subset) of an OpenGL texture.
-- `texture_update_data/3` - Update the data of an OpenGL texture (no re-allocation).
-- `texture_destroy/1` - Destroy an OpenGL texture.
-
-Notice how they reflect the semantics of the OpenGL API
-(uninitialized/allocation/re-allocation) with one constraint: the texture is
-always initialized (it must be at least 1x1 pixel in size).
-
-```
-{ok, [Texture]} = gl:gen_textures(1),
-ok = gl:bind_texture(texture_2d, Texture),
-ok = gl:tex_image_2d()
-```
-
-Each pixel must be encoded in the following format:
-```
-R:8/unsigned byte
-G:8/unsigned byte
-B:8/unsigned byte
-A:8/unsigned byte
-```
-
-Blabla.
-
-**About "shader program" operations**
-
-To be written.
-
-```
-XXX: Can be optimized in various way. For instance, if keeping the a release
-     function per resource is too expensive, it can implement a "register
-    "resource type" mechanism.
-XXX: The start/x function should return infos about the OpenGL context, such as
-     the version, the vendor, etc.
-XXXX: verify if a pbuffer surface is needed (or if passing no_surface is enough)
-
-XXX: Consider adding "kill" option to stop/x function in order to kill owners of
-     resources before freeing the resources.
-```
+The process keeps an EGL context current. `inner_context/0` returns that
+handle so another context can share with it. `execute_commands/1` runs
+OpenGL calls while it is current.
 """.
 
 -behavior(worker).
@@ -124,9 +63,6 @@ XXX: Consider adding "kill" option to stop/x function in order to kill owners of
     execute_commands/1
 ]).
 -export([
-    swap_buffers/0
-]).
--export([
     acquire_resource/1,
     release_resource/1,
     inner_resources/0,
@@ -139,23 +75,30 @@ XXX: Consider adding "kill" option to stop/x function in order to kill owners of
     terminate/2
 ]).
 
-% -include_lib("gl/include/gl.hrl").
-
-% -type resource_type() :: atom().
-% -type resource_handle() :: gl:texture() | gl:buffer() | gl:program().
--type resource_id() :: term().
 -doc """
-To be written.
+A GPU resource identifier.
 
-To be written.
+It is chosen by the acquire function. It must be unique among live resources.
+Typical values are tagged tuples such as `{texture, GlTexture}`.
+""".
+-type resource_id() :: term().
+
+-doc """
+A GPU resource release function.
+
+It runs on the graphics context process. The OpenGL context is current. It is
+called when the resource is released, when the owner process dies, or when
+the graphics context stops.
 """.
 -type resource_release_fun() ::
     fun((resource_id()) -> ok)
 .
--doc """
-To be written.
 
-To be written.
+-doc """
+A GPU resource acquire function.
+
+It runs on the graphics context process. The OpenGL context is current. It
+returns `{ok, ResourceId, ReleaseFun}` or `{error, Reason}`.
 """.
 -type resource_acquire_fun() ::
     fun(() -> {ok, resource_id(), resource_release_fun()} | {error, term()})
@@ -167,27 +110,37 @@ To be written.
 
 -record(state, {
     display :: egl:display(),
-    config :: egl:config(),
     context :: egl:context(),
     surface :: egl:surface(),
     resources = #{} :: #{
-        {resource_id()} := {pid(), reference(), resource_release_fun()}
+        resource_id() => {pid(), reference(), resource_release_fun()}
     }
 }).
 
 -doc """
-To be written.
+Start the graphics context.
 
-To be written.
+It starts the singleton process for the given EGL display. The calling
+process is linked to it. A second start is `already_spawned`.
+
+The display must already be initialized. Meshes, textures, programs, and
+frames require a running graphics context.
 """.
--spec start(egl:display()) -> worker:start_ret().
+-spec start(egl:display()) ->
+    {ok, pid()} |
+    already_spawned |
+    {aborted, term()} |
+    timeout |
+    {error, term()}
+.
 start(Display) ->
     worker:spawn(link, {name, ?WORKER_NAME}, ?MODULE, [Display]).
 
 -doc """
-To be written.
+Stop the graphics context.
 
-To be written.
+It releases remaining GPU resources and destroys the inner OpenGL context.
+Using a resource after stop has undefined behavior. Owners are not killed.
 """.
 -spec stop() -> ok.
 stop() ->
@@ -197,8 +150,8 @@ stop() ->
 -doc """
 The inner OpenGL context.
 
-It returns the inner OpenGL context which is shared by the OpenGL context of
-all surfaces.
+It returns the EGL context handle. Surfaces create their own OpenGL contexts
+that share with this one.
 """.
 -spec inner_context() -> egl:context().
 inner_context() ->
@@ -206,9 +159,13 @@ inner_context() ->
     Context.
 
 -doc """
-To be written.
+Run OpenGL commands.
 
-To be written.
+It runs the given function on the graphics context process. The OpenGL
+context is current. The return value is the function's return value.
+
+If the function raises, it returns `{error, {exception, Class, Reason}}` and
+the graphics context stays running.
 """.
 -spec execute_commands(fun(() -> term())) -> term().
 execute_commands(Commands) ->
@@ -216,19 +173,18 @@ execute_commands(Commands) ->
     Reply.
 
 -doc """
-To be written.
+Acquire a GPU resource.
 
-To be written.
-""".
--spec swap_buffers() -> ok.
-swap_buffers() ->
-    {reply, Reply} = worker:request(?WORKER_NAME, swap_buffers),
-    Reply.
+It runs the acquire function on the graphics context process. The OpenGL
+context is current. The calling process becomes the owner.
 
--doc """
-To be written.
+The acquire function must return `{ok, ResourceId, ReleaseFun}` or
+`{error, Reason}`. The resource id must be unique among live resources. A
+duplicate id is `{error, already_acquired}` and the new GPU object is
+released.
 
-To be written.
+If the function raises, it returns `{error, {exception, Class, Reason}}` and
+no resource is registered.
 """.
 -spec acquire_resource(resource_acquire_fun()) ->
     {ok, resource_id()} | {error, term()}
@@ -239,9 +195,10 @@ acquire_resource(AcquireFun) ->
     Reply.
 
 -doc """
-To be written.
+Release a GPU resource.
 
-To be written.
+It runs the release function on the graphics context process and drops the
+resource from the owner table. A missing id is `invalid_resource_id`.
 """.
 -spec release_resource(resource_id()) -> ok | invalid_resource_id.
 release_resource(ResourceId) ->
@@ -249,22 +206,24 @@ release_resource(ResourceId) ->
     Reply.
 
 -doc """
-To be written.
+The inner GPU resources.
 
-To be written.
+It returns a snapshot of live resource ids and their owner processes.
 """.
--spec inner_resources() -> #{resource_id() := pid()}.
+-spec inner_resources() -> #{resource_id() => pid()}.
 inner_resources() ->
     {reply, Resources} = worker:request(?WORKER_NAME, inner_resources),
     Resources.
 
 -doc """
-To be written.
+Transfer ownership of a GPU resource.
 
-To be written.
+It changes the owner of the given resource without destroying the GPU object.
+A missing id is `invalid_resource_id`.
 """.
 -spec transfer_ownership(resource_id(), pid()) ->
-    ok | invalid_resource_id.
+    ok | invalid_resource_id
+.
 transfer_ownership(ResourceId, Owner) ->
     {reply, Reply} = worker:request(
         ?WORKER_NAME,
@@ -272,6 +231,7 @@ transfer_ownership(ResourceId, Owner) ->
     ),
     Reply.
 
+-doc false.
 initialize([Display]) ->
     ConfigAttribs = [
         {surface_type, [pbuffer_bit]},
@@ -288,31 +248,14 @@ initialize([Display]) ->
 
     egl:bind_api(opengl_api),
     ContextAttribs = [
-        % % % {context_opengl_profile_mask, [context_opengl_core_profile_bit]},
-        % {context_opengl_forward_compatible, true},
-
-        % {context_opengl_robust_access, false},
-        % {context_opengl_debug, true},
-        % % % {context_opengl_reset_notification_strategy, lose_context_on_reset},
-        % % {context_opengl_reset_notification_strategy, no_reset_notification},
-
         {context_major_version, 4},
         {context_minor_version, 6}
     ],
     {ok, Context} =
         egl:create_context(Display, Config, no_context, ContextAttribs),
-    % egl_helper:print_context(Display, Context),
 
     ok = egl:make_current(Display, Surface, Surface, Context),
-    io:format(user, "[debug] OpenGL context made current~n", []),
     ok = gl:glad_load_gl(),
-
-    io:format(user, "[debug] aaa~n", []),
-    {ok, no_error} = gl:get_error(),
-    io:format(user, "[debug] bbb~n", []),
-
-    {ok, Version} = gl:get_string(version),
-    io:format(user, "OpenGL version: ~p~n", [Version]),
 
     {continue, #state{
         display = Display,
@@ -320,6 +263,7 @@ initialize([Display]) ->
         surface = Surface
     }}.
 
+-doc false.
 handle_request(
     inner_context,
     _From,
@@ -328,39 +272,46 @@ handle_request(
     {reply, Context, State};
 
 handle_request({execute_commands, Commands}, _From, State) ->
-    Result = Commands(),
-    {reply, Result, State};
-
-handle_request(
-    swap_buffers,
-    _From,
-    #state{
-        display = Display,
-        surface = Surface
-    } = State
-) ->
-    ok = egl:swap_buffers(Display, Surface),
-    {reply, ok, State};
+    drain_gl_errors(),
+    Reply = try Commands() of
+        Result ->
+            Result
+    catch
+        Class:Reason:_Stack ->
+            {error, {exception, Class, Reason}}
+    end,
+    {reply, Reply, State};
 
 handle_request(
     {acquire_resource, AcquireFun, Owner},
     _From,
     #state{resources = Resources} = State
 ) ->
-    {Reply, NewState} = case AcquireFun() of
+    drain_gl_errors(),
+    {Reply, NewState} = try AcquireFun() of
         {ok, ResourceId, ReleaseFun} ->
-            OwnerMonitor = erlang:monitor(process,
-                Owner,
-                [{tag, {?OWNER_DOWN_MESSAGE, ResourceId}}]
-            ),
-            NewResources = maps:put(
-                ResourceId,
-                {Owner, OwnerMonitor, ReleaseFun},
-                Resources
-            ),
-            {{ok, ResourceId}, State#state{resources = NewResources}};
+            case maps:is_key(ResourceId, Resources) of
+                true ->
+                    run_release(ReleaseFun, ResourceId),
+                    {{error, already_acquired}, State};
+                false ->
+                    OwnerMonitor = erlang:monitor(
+                        process,
+                        Owner,
+                        [{tag, {?OWNER_DOWN_MESSAGE, ResourceId}}]
+                    ),
+                    NewResources = maps:put(
+                        ResourceId,
+                        {Owner, OwnerMonitor, ReleaseFun},
+                        Resources
+                    ),
+                    {{ok, ResourceId}, State#state{resources = NewResources}}
+            end;
         {error, Reason} ->
             {{error, Reason}, State}
+    catch
+        Class:Reason:_Stack ->
+            {{error, {exception, Class, Reason}}, State}
     end,
     {reply, Reply, NewState};
 
@@ -369,22 +320,17 @@ handle_request(
     _From,
     #state{resources = Resources} = State
 ) ->
-    {Reply, NewState} = case maps:get(ResourceId, Resources, undefined) of
-        undefined ->
-            {invalid_resource_id, State};
-        {_Owner, OwnerMonitor, ReleaseFun} ->
-            ok = ReleaseFun(ResourceId),
-
+    {Reply, NewState} = case maps:take(ResourceId, Resources) of
+        {{_Owner, OwnerMonitor, ReleaseFun}, NewResources} ->
+            run_release(ReleaseFun, ResourceId),
             erlang:demonitor(OwnerMonitor, [flush]),
-
-            NewResources = maps:remove(ResourceId, Resources),
-            {ok, State#state{resources = NewResources}}
+            {ok, State#state{resources = NewResources}};
+        error ->
+            {invalid_resource_id, State}
     end,
     {reply, Reply, NewState};
 
 handle_request(inner_resources, _From, #state{resources = Resources} = State) ->
-    % We only return the owner for each resource (discarding the monitor and
-    % the release function).
     Reply = maps:map(fun(_ResourceId, {Owner, _OwnerMonitor, _ReleaseFun}) ->
         Owner
     end, Resources),
@@ -405,7 +351,6 @@ handle_request(
                 [{tag, {?OWNER_DOWN_MESSAGE, ResourceId}}]
             ),
             erlang:demonitor(OwnerMonitor, [flush]),
-
             NewResources = maps:put(
                 ResourceId,
                 {NewOwner, NewOwnerMonitor, ReleaseFun},
@@ -418,25 +363,53 @@ handle_request(
 handle_request(?STOP_REQUEST, _From, State) ->
     {stop, requested, ok, State}.
 
+-doc false.
 handle_message(
-    {{?OWNER_DOWN_MESSAGE, ResourceId}, OwnerMonitor, process, Owner, _Reason},
+    {{?OWNER_DOWN_MESSAGE, ResourceId}, _OwnerMonitor, process, _Owner, _Reason},
     #state{resources = Resources} = State
 ) ->
-    {{Owner, OwnerMonitor, ReleaseFun}, NewResources} =
-        maps:take(ResourceId, Resources),
+    NewState = case maps:take(ResourceId, Resources) of
+        {{_TrackedOwner, _TrackedMonitor, ReleaseFun}, NewResources} ->
+            run_release(ReleaseFun, ResourceId),
+            State#state{resources = NewResources};
+        error ->
+            State
+    end,
+    {continue, NewState}.
 
-    % Release the resource.
-    ok = ReleaseFun(ResourceId),
-
-    {continue, State#state{resources = NewResources}}.
-
-terminate(requested, #state{resources = Resources}) ->
+-doc false.
+terminate(_Reason, #state{
+    display = Display,
+    context = Context,
+    surface = Surface,
+    resources = Resources
+}) ->
     maps:foreach(fun(ResourceId, {_Owner, OwnerMonitor, ReleaseFun}) ->
-        % Release the resource.
-        ok = ReleaseFun(ResourceId),
-
-        % Delete the monitor.
+        run_release(ReleaseFun, ResourceId),
         erlang:demonitor(OwnerMonitor, [flush])
     end, Resources),
-
+    % Do not unbind with `no_context`: that EGL path asserts. Destroy the
+    % pbuffer and context from this process while they are still current.
+    _ = egl:destroy_surface(Display, Surface),
+    _ = egl:destroy_context(Display, Context),
     ok.
+
+run_release(ReleaseFun, ResourceId) ->
+    drain_gl_errors(),
+    try ReleaseFun(ResourceId) of
+        _ ->
+            ok
+    catch
+        _Class:_Reason:_Stack ->
+            ok
+    end.
+
+drain_gl_errors() ->
+    case gl:get_error() of
+        {ok, no_error} ->
+            ok;
+        {ok, _Error} ->
+            drain_gl_errors();
+        _ ->
+            ok
+    end.
