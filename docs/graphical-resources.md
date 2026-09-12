@@ -22,13 +22,13 @@ macros come from `graphics.hrl`.
 
 | Kind | Modules | GPU object |
 | --- | --- | --- |
-| Value | `vector2`, `vector3`, `matrix3`, `matrix4`, `color`, `box2`, `box3`, `camera2`, `camera3`, `transform2`, `transform3`, `view2`, `view3` | no |
+| Value | `graphics_vector2`, `graphics_vector3`, `graphics_matrix3`, `graphics_matrix4`, `graphics_color`, `graphics_box2`, `graphics_box3`, `graphics_camera2`, `graphics_camera3`, `graphics_transform2`, `graphics_transform3`, `graphics_view2`, `graphics_view3` | no |
 | Vertex / image | `graphics:vertex2()`, `graphics:vertex3()`, `graphics:image()` | no; there is no vertex module |
-| GPU resource | `mesh2`, `mesh3`, `texture`, `program`, `frame` | yes; acquired on `graphics_context` |
-| Draw target worker | `surface` | yes; own OpenGL context, linked process |
-| Wrapper | `shape2`, `shape3`, `sprite` | the meshes underneath |
+| GPU resource | `graphics_mesh2`, `graphics_mesh3`, `graphics_texture`, `graphics_program`, `graphics_frame` | yes; acquired on `graphics_context` |
+| Draw target worker | `graphics_surface` | yes; own OpenGL context, linked process |
+| Wrapper | `graphics_shape2`, `graphics_shape3`, `graphics_sprite` | the meshes underneath |
 
-`sprite` constructs a `graphics:shape2()`. There is no sprite type.
+`graphics_sprite` constructs a `graphics:shape2()`. There is no sprite type.
 
 ## Creating and destroying
 
@@ -36,11 +36,11 @@ GPU constructors are named `with_*`. They return `{ok, Object}` or a resource
 error.
 
 ```erlang
-{ok, Mesh} = mesh2:with_vertices(Vertices),
-{ok, Texture} = texture:with_image(Image),
-{ok, Program} = program:with_shaders(VertexSrc, FragmentSrc),
-{ok, Frame} = frame:with_size({256, 256}),
-{ok, Surface} = surface:with_size(Display, {640, 480}).
+{ok, Mesh} = graphics_mesh2:with_vertices(Vertices),
+{ok, Texture} = graphics_texture:with_image(Image),
+{ok, Program} = graphics_program:with_shaders(VertexSrc, FragmentSrc),
+{ok, Frame} = graphics_frame:with_size({256, 256}),
+{ok, Surface} = graphics_surface:with_size(Display, {640, 480}).
 ```
 
 `out_of_memory` is a bare atom. Program compile and link failures are tagged
@@ -50,11 +50,11 @@ Dispose with `destroy/1`. Using the object afterwards has undefined behavior.
 Destroying the same object twice is invalid.
 
 ```erlang
-ok = mesh2:destroy(Mesh),
-ok = texture:destroy(Texture),
-ok = program:destroy(Program),
-ok = frame:destroy(Frame),
-ok = surface:destroy(Surface).
+ok = graphics_mesh2:destroy(Mesh),
+ok = graphics_texture:destroy(Texture),
+ok = graphics_program:destroy(Program),
+ok = graphics_frame:destroy(Frame),
+ok = graphics_surface:destroy(Surface).
 ```
 
 `graphics:terminate/0` stops the graphics context and releases remaining GPU
@@ -70,7 +70,7 @@ records `self()`. If that process dies, the GPU object is released. If the
 graphics context stops, remaining resources are released. Owners are not
 killed.
 
-Copying a `texture:object()` or `mesh2:object()` shares the GPU object. It
+Copying a `graphics_texture:object()` or `graphics_mesh2:object()` shares the GPU object. It
 does not create a second owner.
 
 `graphics_context:transfer_ownership/2` retargets the owner of a
@@ -91,7 +91,7 @@ A surface presents to a window or a pbuffer and can read CPU pixels. A frame
 is an offscreen target whose result is a texture.
 
 The frame owns its framebuffer, its hidden depth renderbuffer, its color
-texture, and its stock program. `frame:texture/1` returns that owned texture.
+texture, and its stock program. `graphics_frame:texture/1` returns that owned texture.
 Destroying the frame destroys the texture. Do not destroy the texture
 independently.
 
@@ -111,12 +111,12 @@ A shape is a value wrapper around GPU meshes, a model matrix, and an optional
 texture. Copying the term shares the meshes.
 
 ```erlang
-{ok, Shape} = shape2:rectangle({0.0, 0.0}, {100.0, 50.0}, ?COLOR_RED),
-ok = shape2:destroy(Shape).
+{ok, Shape} = graphics_shape2:rectangle({0.0, 0.0}, {100.0, 50.0}, ?COLOR_RED),
+ok = graphics_shape2:destroy(Shape).
 ```
 
 `destroy/1` destroys the meshes. It does not destroy the texture. Primitive
-constructors allocate with `mesh2:with_vertices/1` or `mesh3:with_vertices/1`.
+constructors allocate with `graphics_mesh2:with_vertices/1` or `graphics_mesh3:with_vertices/1`.
 `with_mesh` / `with_meshes` do not allocate.
 
 `set_matrix/2` and `set_texture/2` return a new shape with the same mesh
@@ -131,7 +131,7 @@ Mesh usage hints are `static`, `dynamic`, and `stream`. They are DRAW only.
 The default is `static`.
 
 ```erlang
-{ok, Mesh} = mesh2:with_vertices(Vertices, dynamic).
+{ok, Mesh} = graphics_mesh2:with_vertices(Vertices, dynamic).
 ```
 
 Copy policy is `no_copy` or `keep_copy`. The default is `no_copy`.
@@ -139,8 +139,8 @@ Copy policy is `no_copy` or `keep_copy`. The default is `no_copy`.
 cache. `remote_vertices/1` and `remote_image/1` read from the GPU.
 
 ```erlang
-{ok, Mesh} = mesh2:with_vertices(Vertices, static, keep_copy),
-Vertices = mesh2:local_vertices(Mesh).
+{ok, Mesh} = graphics_mesh2:with_vertices(Vertices, static, keep_copy),
+Vertices = graphics_mesh2:local_vertices(Mesh).
 ```
 
 `keep_local_copy/1` GPU-reads and stores a cache. `release_local_copy/1`
@@ -150,4 +150,4 @@ In-place updates (`update_vertices`, `update_image`, `update_pixel`) keep
 the size. Replacing the payload (`set_vertices`, `set_image`, `resize`)
 reallocates the data store and keeps the OpenGL id.
 
-See the `mesh2`, `mesh3`, and `texture` modules.
+See the `graphics_mesh2`, `graphics_mesh3`, and `graphics_texture` modules.

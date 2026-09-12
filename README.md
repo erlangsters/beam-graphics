@@ -63,7 +63,7 @@ Display = egl:get_display(default_display),
 {ok, {_, _}} = egl:initialize(Display),
 ok = graphics:initialize(Display),
 
-{ok, Surface} = surface:with_size(Display, {640, 480}).
+{ok, Surface} = graphics_surface:with_size(Display, {640, 480}).
 ```
 
 A running graphics context is required. The default projection maps pixel
@@ -71,20 +71,20 @@ coordinates with Y up. The default depth test is `enabled`. Overlapping 2D
 draws share Z, so disable it before drawing 2D.
 
 ```erlang
-{ok, Surface} = surface:set_depth_test(Surface, disabled),
-ok = surface:clear(Surface, ?COLOR_BLACK),
+{ok, Surface} = graphics_surface:set_depth_test(Surface, disabled),
+ok = graphics_surface:clear(Surface, ?COLOR_BLACK),
 
-{ok, Triangle} = shape2:triangle(
+{ok, Triangle} = graphics_shape2:triangle(
     {320.0, 360.0},
     {220.0, 120.0},
     {420.0, 120.0},
     ?COLOR_RED
 ),
-ok = surface:draw_shape2(Surface, Triangle),
-Image = surface:image(Surface),
+ok = graphics_surface:draw_shape2(Surface, Triangle),
+Image = graphics_surface:image(Surface),
 
-ok = shape2:destroy(Triangle),
-ok = surface:destroy(Surface),
+ok = graphics_shape2:destroy(Triangle),
+ok = graphics_surface:destroy(Surface),
 ok = graphics:terminate().
 ```
 
@@ -111,25 +111,25 @@ with a model matrix. `set_matrix/2` returns a new shape; the GPU buffers are
 not copied.
 
 ```erlang
-{ok, Rect} = shape2:rectangle({-50.0, -25.0}, {100.0, 50.0}, ?COLOR_RED),
-Moved = shape2:set_matrix(Rect, transform2:translation({320.0, 240.0})),
-ok = surface:draw_shape2(Surface, Moved),
-ok = shape2:destroy(Rect).
+{ok, Rect} = graphics_shape2:rectangle({-50.0, -25.0}, {100.0, 50.0}, ?COLOR_RED),
+Moved = graphics_shape2:set_matrix(Rect, graphics_transform2:translation({320.0, 240.0})),
+ok = graphics_surface:draw_shape2(Surface, Moved),
+ok = graphics_shape2:destroy(Rect).
 ```
 
 A 2D view is a projection. A 2D camera is an observer. Both are 3x3 matrices.
 A surface stores 4x4 view and projection uniforms; embed with
-`matrix3:to_matrix4/1`.
+`graphics_matrix3:to_matrix4/1`.
 
 ```erlang
-{ok, Surface} = surface:set_projection_matrix(
+{ok, Surface} = graphics_surface:set_projection_matrix(
     Surface,
-    matrix3:to_matrix4(view2:orthographic(0.0, 640.0, 0.0, 480.0))
+    graphics_matrix3:to_matrix4(graphics_view2:orthographic(0.0, 640.0, 0.0, 480.0))
 ),
-Camera = camera2:from_center({320.0, 240.0}),
-{ok, Surface} = surface:set_view_matrix(
+Camera = graphics_camera2:from_center({320.0, 240.0}),
+{ok, Surface} = graphics_surface:set_view_matrix(
     Surface,
-    matrix3:to_matrix4(camera2:view_matrix(Camera))
+    graphics_matrix3:to_matrix4(graphics_camera2:view_matrix(Camera))
 ).
 ```
 
@@ -142,23 +142,23 @@ Replace the default pixel projection with a perspective view and a look-at
 camera. Keep the depth test enabled.
 
 ```erlang
-{ok, Surface} = surface:set_depth_test(Surface, enabled),
-{ok, Surface} = surface:set_projection_matrix(
+{ok, Surface} = graphics_surface:set_depth_test(Surface, enabled),
+{ok, Surface} = graphics_surface:set_projection_matrix(
     Surface,
-    view3:perspective(math:pi() / 4.0, 640.0 / 480.0, 0.1, 100.0)
+    graphics_view3:perspective(math:pi() / 4.0, 640.0 / 480.0, 0.1, 100.0)
 ),
-Camera = camera3:look_at({0.0, 0.0, 5.0}, {0.0, 0.0, 0.0}),
-{ok, Surface} = surface:set_view_matrix(
+Camera = graphics_camera3:look_at({0.0, 0.0, 5.0}, {0.0, 0.0, 0.0}),
+{ok, Surface} = graphics_surface:set_view_matrix(
     Surface,
-    camera3:view_matrix(Camera)
+    graphics_camera3:view_matrix(Camera)
 ),
-{ok, Cube} = shape3:cube({0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, ?COLOR_RED),
-ok = surface:draw_shape3(Surface, Cube),
-ok = shape3:destroy(Cube).
+{ok, Cube} = graphics_shape3:cube({0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, ?COLOR_RED),
+ok = graphics_surface:draw_shape3(Surface, Cube),
+ok = graphics_shape3:destroy(Cube).
 ```
 
 A sprite is a 2D rectangle. Textured 3D geometry is built with
-`shape3:with_mesh/4`. See [3D Rendering](docs/going-3d.md).
+`graphics_shape3:with_mesh/4`. See [3D Rendering](docs/going-3d.md).
 
 ## Displaying an image
 
@@ -172,10 +172,10 @@ handle. `display/1` presents. After it, the window back buffer is undefined.
 true = glfw:init(),
 {ok, Window} = glfw:create_window(640, 480, "beam-graphics"),
 Handle = glfw:window_egl_handle(Window),
-{ok, Surface} = surface:with_window(Display, Handle, {640, 480}),
-ok = surface:clear(Surface, ?COLOR_BLACK),
-ok = surface:draw_shape2(Surface, Shape),
-ok = surface:display(Surface).
+{ok, Surface} = graphics_surface:with_window(Display, Handle, {640, 480}),
+ok = graphics_surface:clear(Surface, ?COLOR_BLACK),
+ok = graphics_surface:draw_shape2(Surface, Shape),
+ok = graphics_surface:display(Surface).
 ```
 
 See [Display on a Window](docs/display-window.md).
@@ -184,33 +184,33 @@ To save pixels, read the surface and encode with
 [beam-graphics-image](https://github.com/erlangsters/beam-graphics-image).
 
 ```erlang
-Image = surface:image(Surface),
-ok = image_png:save(Image, "screenshot.png").
+Image = graphics_surface:image(Surface),
+ok = graphics_image_png:save(Image, "screenshot.png").
 ```
 
-An offscreen GPU target with no CPU round-trip is a `frame`. Sample
-`frame:texture/1` later. See [Texturing](docs/texturing.md).
+An offscreen GPU target with no CPU round-trip is a `graphics_frame`. Sample
+`graphics_frame:texture/1` later. See [Texturing](docs/texturing.md).
 
 ## Going native
 
 The stock pipeline covers position, color, UV, a model matrix, a view, a
 projection, and an optional texture. Draw does not take a program.
 
-To compile your own shaders, build a `program` and issue OpenGL commands
+To compile your own shaders, build a `graphics_program` and issue OpenGL commands
 while the intended context is current. On a surface that is `gl_commands/2`.
 On the graphics context, and on a frame, that is `execute_commands/1`.
 
 ```erlang
-{ok, Program} = program:with_shaders(VertexSrc, FragmentSrc),
-ok = program:set_uniform(Program, "uModel", matrix4:identity()),
-_ = surface:gl_commands(Surface, fun() ->
-    ok = gl:use_program(program:gl_object(Program)),
+{ok, Program} = graphics_program:with_shaders(VertexSrc, FragmentSrc),
+ok = graphics_program:set_uniform(Program, "uModel", graphics_matrix4:identity()),
+_ = graphics_surface:gl_commands(Surface, fun() ->
+    ok = gl:use_program(graphics_program:gl_object(Program)),
     ok
 end),
-ok = program:destroy(Program).
+ok = graphics_program:destroy(Program).
 ```
 
-Uniform writes through `program:set_uniform/3` hop to the graphics context.
+Uniform writes through `graphics_program:set_uniform/3` hop to the graphics context.
 They are not reliably visible on a surface context. Set uniforms with
 `gl:program_uniform*` inside `gl_commands/2` when drawing on a surface.
 
@@ -224,9 +224,9 @@ in 2D and cube and sphere in 3D. The broader catalog is
 Those modules construct a core `graphics:shape2()` or `graphics:shape3()`.
 
 ```erlang
-{ok, Ellipse} = shape2_ellipse:solid({320.0, 240.0}, {80.0, 40.0}, ?COLOR_RED),
-ok = surface:draw_shape2(Surface, Ellipse),
-ok = shape2:destroy(Ellipse).
+{ok, Ellipse} = graphics_shape2_ellipse:solid({320.0, 240.0}, {80.0, 40.0}, ?COLOR_RED),
+ok = graphics_surface:draw_shape2(Surface, Ellipse),
+ok = graphics_shape2:destroy(Ellipse).
 ```
 
 See [Fancy Shapes](docs/fancy-shapes.md).
@@ -236,8 +236,8 @@ decodes and encodes PNG, JPEG, and BMP as a `graphics:image()`. It does not
 create a GPU texture.
 
 ```erlang
-{ok, Image} = image_png:load("sprite.png"),
-{ok, Texture} = texture:with_image(Image).
+{ok, Image} = graphics_image_png:load("sprite.png"),
+{ok, Texture} = graphics_texture:with_image(Image).
 ```
 
 See [Texturing](docs/texturing.md).
@@ -249,9 +249,9 @@ mode `alpha`. The font owns the atlas texture; the text shape does not.
 ```erlang
 {ok, Font} = graphics_font:from_file("font.ttf", 32.0),
 {ok, Shape} = graphics_text:from_string(Font, {0.0, 0.0}, "Hello", ?COLOR_WHITE),
-{ok, Surface} = surface:set_blend_mode(Surface, alpha),
-ok = surface:draw_shape2(Surface, Shape),
-ok = shape2:destroy(Shape),
+{ok, Surface} = graphics_surface:set_blend_mode(Surface, alpha),
+ok = graphics_surface:draw_shape2(Surface, Shape),
+ok = graphics_shape2:destroy(Shape),
 ok = graphics_font:destroy(Font).
 ```
 

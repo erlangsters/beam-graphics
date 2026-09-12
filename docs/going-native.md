@@ -17,13 +17,13 @@ escape hatch is the OpenGL-shaped part.
 
 ## When to go native
 
-Stay on `surface` / `frame` draw calls when the stock program is enough:
+Stay on `graphics_surface` / `graphics_frame` draw calls when the stock program is enough:
 position, color, UV, a model matrix, a view, a projection, and an optional
 texture.
 
 Go native to compile your own shaders, bind extra GL state, or draw with a
 vertex layout this library does not own. Draw does not take a program.
-`surface:draw_mesh2/4` and `frame:draw_mesh3/4` always use the stock
+`graphics_surface:draw_mesh2/4` and `graphics_frame:draw_mesh3/4` always use the stock
 pipeline.
 
 ## Mapping to OpenGL
@@ -31,11 +31,11 @@ pipeline.
 | Concept | OpenGL object | Escape hatch |
 | --- | --- | --- |
 | `graphics_context` | Shared EGL/OpenGL context and the resource table | `inner_context/0`, `execute_commands/1` |
-| `surface` | EGL window or pbuffer, dedicated OpenGL context | `gl_commands/2` |
-| `frame` | Framebuffer, color texture, hidden depth renderbuffer | `gl_object/1` (framebuffer). Color id is `texture:gl_object(frame:texture(Frame))` |
-| `mesh2`, `mesh3` | Buffer | `gl_object/1` |
-| `texture` | 2D texture | `gl_object/1` |
-| `program` | Program | `gl_object/1` |
+| `graphics_surface` | EGL window or pbuffer, dedicated OpenGL context | `gl_commands/2` |
+| `graphics_frame` | Framebuffer, color texture, hidden depth renderbuffer | `gl_object/1` (framebuffer). Color id is `graphics_texture:gl_object(graphics_frame:texture(Frame))` |
+| `graphics_mesh2`, `graphics_mesh3` | Buffer | `gl_object/1` |
+| `graphics_texture` | 2D texture | `gl_object/1` |
+| `graphics_program` | Program | `gl_object/1` |
 
 A surface context shares with the graphics context, so mesh, texture, and
 program ids created on `graphics_context` can be used while a surface
@@ -49,9 +49,9 @@ A program is a GPU shader program. There is one module for 2D and 3D. It is
 created from a vertex shader string and a fragment shader string.
 
 ```erlang
-{ok, Program} = program:with_shaders(VertexSrc, FragmentSrc),
-ok = program:set_uniform(Program, "uModel", matrix4:identity()),
-ok = program:destroy(Program).
+{ok, Program} = graphics_program:with_shaders(VertexSrc, FragmentSrc),
+ok = graphics_program:set_uniform(Program, "uModel", graphics_matrix4:identity()),
+ok = graphics_program:destroy(Program).
 ```
 
 `set_uniform/3` writes GPU state with `glProgramUniform*`. The program does
@@ -59,20 +59,20 @@ not need to be bound. The Erlang term does not change. A missing or
 optimized-out name is `no_uniform`. A well-formed value of the wrong kind is
 `type_mismatch`.
 
-Supported uniform types: `bool`, `int`, `float`, `vector2`, `vector3`,
-`vector4`, `matrix3`, `matrix4`, `sampler2d`. A `sampler2d` value is a
-texture unit (an integer), not a `texture:object()`. A color is a `vector4`.
-There is no silent `matrix3:to_matrix4/1`.
+Supported uniform types: `bool`, `int`, `float`, `graphics_vector2`, `graphics_vector3`,
+`vector4`, `graphics_matrix3`, `graphics_matrix4`, `sampler2d`. A `sampler2d` value is a
+texture unit (an integer), not a `graphics_texture:object()`. A color is a `vector4`.
+There is no silent `graphics_matrix3:to_matrix4/1`.
 
 `binary/1` returns a vendor-specific compiled payload. It is not portable
 across drivers. `no_binary` means the driver has no program binary.
 
 Meshes upload position, color, and UV at attribute locations 0, 1, and 2.
-`program` does not enforce that layout. A custom program drawn against these
+`graphics_program` does not enforce that layout. A custom program drawn against these
 meshes should match it. 2D positions are two floats; a `vec3` input reads
 Z as `0.0`.
 
-See the `program` module.
+See the `graphics_program` module.
 
 ## Issuing OpenGL commands
 
@@ -91,7 +91,7 @@ end).
 On a surface:
 
 ```erlang
-Result = surface:gl_commands(Surface, fun() ->
+Result = graphics_surface:gl_commands(Surface, fun() ->
     ok = gl:viewport(0, 0, 640, 480),
     ok = gl:clear_color(0.0, 0.0, 0.0, 1.0),
     ok = gl:clear([color_buffer_bit, depth_buffer_bit]),
@@ -102,16 +102,16 @@ end).
 If the fun raises, the return is `{error, {exception, Class, Reason}}` and
 the process stays running.
 
-`program:set_uniform/3` hops to `graphics_context`. Uniform writes there are
+`graphics_program:set_uniform/3` hops to `graphics_context`. Uniform writes there are
 not reliably visible on a surface context. On a surface, set uniforms with
 `gl:program_uniform*` inside `gl_commands/2`. On a frame, `set_uniform/3`
 is the same context that draws.
 
-Bind a frame's framebuffer from `frame:gl_object/1` before issuing draw
-commands through `execute_commands/1`. Sampling `frame:texture(Frame)` while
+Bind a frame's framebuffer from `graphics_frame:gl_object/1` before issuing draw
+commands through `execute_commands/1`. Sampling `graphics_frame:texture(Frame)` while
 that framebuffer is the draw target is undefined.
 
-After custom draws on a surface, `surface:display/1` and `surface:image/1`
+After custom draws on a surface, `graphics_surface:display/1` and `graphics_surface:image/1`
 still work. The stock `draw_mesh` / `draw_shape` calls are unaware of extra
 GL state you leave bound; set what you need inside the same command batch.
 
@@ -122,10 +122,10 @@ and frame each own one.
 
 Attribute locations: 0 position, 1 color, 2 UV.
 
-Uniforms: `uModel`, `uView`, `uProjection` (`matrix4`), `uTexture`
+Uniforms: `uModel`, `uView`, `uProjection` (`graphics_matrix4`), `uTexture`
 (`sampler2d` unit 0), `uUseTexture` (`bool`).
 
-2D model matrices are embedded with `matrix3:to_matrix4/1` at draw time.
+2D model matrices are embedded with `graphics_matrix3:to_matrix4/1` at draw time.
 `uUseTexture` selects vertex color only, or vertex color modulated by the
 bound texture.
 

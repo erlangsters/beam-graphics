@@ -65,7 +65,7 @@ A 2D vector.
 A pair of numbers typically used to represent 2D positions and directions in
 the Euclidean plane.
 
-Note that `matrix3:multiply_vector/2` treats a 2D vector as a point by assuming
+Note that `graphics_matrix3:multiply_vector/2` treats a 2D vector as a point by assuming
 an invisible third component set to 1.0 (the homogeneous coordinate).
 """.
 -type vector2() :: {
@@ -79,7 +79,7 @@ A 3D vector.
 A triplet of numbers typically used to represent 3D positions and directions in
 the Euclidean space.
 
-Note that `matrix4:multiply_vector/2` treats a 3D vector as a point by assuming
+Note that `graphics_matrix4:multiply_vector/2` treats a 3D vector as a point by assuming
 an invisible fourth component set to 1.0 (the homogeneous coordinate).
 """.
 -type vector3() :: {
@@ -153,15 +153,15 @@ A RGBA color.
 
 A quadruplet of numbers typically used to represent the red, green, blue, and
 alpha channels of a pixel, a vertex, or a clear value. Each channel is a
-`color:channel()` float, typically in the range 0.0 to 1.0.
+`graphics_color:channel()` float, typically in the range 0.0 to 1.0.
 
-Use the `color` module to create and manipulate colors.
+Use the `graphics_color` module to create and manipulate colors.
 """.
 -type color() :: {
-    Red :: color:channel(),
-    Green :: color:channel(),
-    Blue :: color:channel(),
-    Alpha :: color:channel()
+    Red :: graphics_color:channel(),
+    Green :: graphics_color:channel(),
+    Blue :: graphics_color:channel(),
+    Alpha :: graphics_color:channel()
 }.
 
 -doc """
@@ -194,8 +194,8 @@ A 2D vertex.
 A 2D position, a color, and UV texture coordinates typically used to describe
 a point of 2D geometry.
 
-There is no `vertex2` module. `box2:from_vertices/1` ignores the color and UV
-coordinates. `transform2:transform_vertex/2` transforms the position and leaves
+There is no `vertex2` module. `graphics_box2:from_vertices/1` ignores the color and UV
+coordinates. `graphics_transform2:transform_vertex/2` transforms the position and leaves
 the color and UV coordinates unchanged.
 """.
 -type vertex2() :: {
@@ -211,8 +211,8 @@ A 3D vertex.
 A 3D position, a color, and UV texture coordinates typically used to describe
 a point of 3D geometry.
 
-There is no `vertex3` module. `box3:from_vertices/1` ignores the color and UV
-coordinates. `transform3:transform_vertex/2` transforms the position and leaves
+There is no `vertex3` module. `graphics_box3:from_vertices/1` ignores the color and UV
+coordinates. `graphics_transform3:transform_vertex/2` transforms the position and leaves
 the color and UV coordinates unchanged.
 """.
 -type vertex3() :: {
@@ -227,18 +227,18 @@ the color and UV coordinates unchanged.
 
 A collection of 2D vertices that can be rendered on a frame or a surface.
 
-Use the `mesh2` module to create and manipulate 2D meshes.
+Use the `graphics_mesh2` module to create and manipulate 2D meshes.
 """.
--type mesh2() :: mesh2:object().
+-type mesh2() :: graphics_mesh2:object().
 
 -doc """
 3D mesh object.
 
 A collection of 3D vertices that can be rendered on a frame or a surface.
 
-Use the `mesh3` module to create and manipulate 3D meshes.
+Use the `graphics_mesh3` module to create and manipulate 3D meshes.
 """.
--type mesh3() :: mesh3:object().
+-type mesh3() :: graphics_mesh3:object().
 
 -doc """
 A texture image.
@@ -246,27 +246,27 @@ A texture image.
 A width, a height, and a row-major list of RGBA colors typically used as the
 CPU-side payload of a texture.
 
-Use the `texture` module to create and manipulate textures from an image.
+Use the `graphics_texture` module to create and manipulate textures from an image.
 """.
--type image() :: texture:image().
+-type image() :: graphics_texture:image().
 
 -doc """
 Texture object.
 
 A 2D array of pixels that can be sampled when rendering a mesh.
 
-Use the `texture` module to create and manipulate textures.
+Use the `graphics_texture` module to create and manipulate textures.
 """.
--type texture() :: texture:object().
+-type texture() :: graphics_texture:object().
 
 -doc """
 Program object.
 
 A GPU shader program that can be used for rendering.
 
-Use the `program` module to create and manipulate programs.
+Use the `graphics_program` module to create and manipulate programs.
 """.
--type program() :: program:object().
+-type program() :: graphics_program:object().
 
 -doc """
 A mesh primitive type.
@@ -289,8 +289,8 @@ triangle fan.
 A vertex draw count.
 
 It is the number of vertices consumed by a draw call. On a shape, it is stored
-per mesh and is not necessarily `mesh2:vertex_count/1` or
-`mesh3:vertex_count/1`.
+per mesh and is not necessarily `graphics_mesh2:vertex_count/1` or
+`graphics_mesh3:vertex_count/1`.
 """.
 -type vertex_count() :: non_neg_integer().
 
@@ -300,7 +300,7 @@ A 2D shape.
 A collection of 2D meshes, a 3x3 model matrix, and an optional texture
 typically used as a drawable 2D object.
 
-The data structure is the `#shape2{}` record. Use the `shape2` module to create
+The data structure is the `#shape2{}` record. Use the `graphics_shape2` module to create
 and manipulate 2D shapes.
 """.
 -type shape2() :: #shape2{}.
@@ -311,7 +311,7 @@ A 3D shape.
 A collection of 3D meshes, a 4x4 model matrix, and an optional texture
 typically used as a drawable 3D object.
 
-The data structure is the `#shape3{}` record. Use the `shape3` module to create
+The data structure is the `#shape3{}` record. Use the `graphics_shape3` module to create
 and manipulate 3D shapes.
 """.
 -type shape3() :: #shape3{}.
@@ -345,11 +345,11 @@ target.
 Surface object.
 
 A presentable 2D image that can be used as a render target. The result is
-shown with `surface:display/1` or read back with `surface:image/1`.
+shown with `graphics_surface:display/1` or read back with `graphics_surface:image/1`.
 
-Use the `surface` module to create and manipulate surfaces.
+Use the `graphics_surface` module to create and manipulate surfaces.
 """.
--type surface() :: surface:object().
+-type surface() :: graphics_surface:object().
 
 -doc """
 Frame object.
@@ -357,9 +357,9 @@ Frame object.
 An offscreen 2D image that can be used as a render target. The result is a
 texture that can be sampled when rendering a mesh.
 
-Use the `frame` module to create and manipulate frames.
+Use the `graphics_frame` module to create and manipulate frames.
 """.
--type frame() :: frame:object().
+-type frame() :: graphics_frame:object().
 
 -doc """
 To be written.

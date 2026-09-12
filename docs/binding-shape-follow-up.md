@@ -47,7 +47,7 @@ old arities would make the binding look like `gl.h` with snake_case.
 | `gl:pixel_store(i, unpack_alignment, 1)` | `gl:pixel_store(unpack_alignment, 1)` | `i`/`f` can be chosen from `is_integer` / `is_float`. An extra selector would only mimic `tex_parameter`. |
 | `gl:location()` / `gl:uniform_location()` | `gl:int()` | Locations are not object names; they can be `-1`. Family-specific types are for objects. |
 
-`matrix4:columns/1` already builds nested column tuples. That matches
+`graphics_matrix4:columns/1` already builds nested column tuples. That matches
 `uniform_matrix/3`. The extra `1, false` arguments are leftover C signature,
 not a missing matrix feature.
 
