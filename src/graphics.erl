@@ -151,7 +151,11 @@ The tuple is stored in column-major order (top-to-bottom, left-to-right).
 -doc """
 A RGBA color.
 
-To be written.
+A quadruplet of numbers typically used to represent the red, green, blue, and
+alpha channels of a pixel, a vertex, or a clear value. Each channel is a
+`color:channel()` float, typically in the range 0.0 to 1.0.
+
+Use the `color` module to create and manipulate colors.
 """.
 -type color() :: {
     Red :: color:channel(),
