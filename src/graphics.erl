@@ -256,9 +256,11 @@ Use the `texture` module to create and manipulate textures.
 -type texture() :: texture:object().
 
 -doc """
-To be written.
+Program object.
 
-To be written.
+A GPU shader program that can be used for rendering.
+
+Use the `program` module to create and manipulate programs.
 """.
 -type program() :: program:object().
 
