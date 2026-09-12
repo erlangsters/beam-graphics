@@ -41,7 +41,8 @@ To be written.
     camera2/0, camera3/0
 ]).
 -export_type([
-    surface/0
+    surface/0,
+    frame/0
 ]).
 
 -export([
@@ -340,6 +341,16 @@ To be written.
 To be written.
 """.
 -type surface() :: surface:object().
+
+-doc """
+Frame object.
+
+An offscreen 2D image that can be used as a render target. The result is a
+texture that can be sampled when rendering a mesh.
+
+Use the `frame` module to create and manipulate frames.
+""".
+-type frame() :: frame:object().
 
 -doc """
 To be written.

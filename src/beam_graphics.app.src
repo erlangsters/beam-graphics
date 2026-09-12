@@ -22,7 +22,8 @@
         program,
         shape2, shape3,
         camera2, camera3,
-        surface
+        surface,
+        frame
     ]},
     {licenses, ["MIT"]},
     {links, []}
