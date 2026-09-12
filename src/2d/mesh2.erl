@@ -18,9 +18,10 @@ the `with_vertices` functions and disposed with the `destroy/1` function.
 Copying the term does not copy the GPU buffer.
 
 Each 2D vertex is a position, a color, and UV texture coordinates (see
-`graphics:vertex2()`). Meshes are rendered on a surface with a primitive type
-and an optional texture. The primitive type and the texture are not part of
-the mesh; they are arguments of `surface:draw_mesh2/4` and of `shape2`.
+`graphics:vertex2()`). Meshes are rendered on a frame or a surface with a
+primitive type and an optional texture. The primitive type and the texture are
+not part of the mesh; they are arguments of `frame:draw_mesh2/4`,
+`surface:draw_mesh2/4`, and of `shape2`.
 
 ```erlang
 {ok, Mesh} = mesh2:with_vertices([

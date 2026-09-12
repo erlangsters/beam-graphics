@@ -50,6 +50,8 @@ frame_test() ->
     ?MATRIX4_IDENTITY = frame:view_matrix(Frame),
     DefaultProjection = default_projection(?FRAME_WIDTH, ?FRAME_HEIGHT),
     DefaultProjection = frame:projection_matrix(Frame),
+    none = frame:blend_mode(Frame),
+    enabled = frame:depth_test(Frame),
 
     Texture = frame:texture(Frame),
     ?FRAME_SIZE = texture:size(Texture),
@@ -63,7 +65,6 @@ frame_test() ->
     ?BLACK_IMAGE = texture:remote_image(Texture),
 
     ok = frame:destroy(Frame),
-
     ok.
 
 frame_with_size_test() ->
@@ -111,16 +112,20 @@ frame_resize_test() ->
     {ok, Frame1} = frame:set_view_matrix(Frame0, ?VIEW_MATRIX),
     {ok, Frame2} = frame:set_viewport(Frame1, {0, 0, 1, 1}),
     {ok, Frame3} = frame:set_projection_matrix(Frame2, ?MATRIX4_IDENTITY),
-    Framebuffer = frame:gl_object(Frame3),
-    GlTexture = texture:gl_object(frame:texture(Frame3)),
-    ok = frame:clear(Frame3, ?COLOR_RED),
+    {ok, Frame3a} = frame:set_blend_mode(Frame3, alpha),
+    {ok, Frame3b} = frame:set_depth_test(Frame3a, disabled),
+    Framebuffer = frame:gl_object(Frame3b),
+    GlTexture = texture:gl_object(frame:texture(Frame3b)),
+    ok = frame:clear(Frame3b, ?COLOR_RED),
 
-    {ok, Frame4} = frame:resize(Frame3, {4, 3}),
+    {ok, Frame4} = frame:resize(Frame3b, {4, 3}),
     {4, 3} = frame:size(Frame4),
     {4, 3} = texture:size(frame:texture(Frame4)),
     {0, 0, 4, 3} = frame:viewport(Frame4),
     ?VIEW_MATRIX = frame:view_matrix(Frame4),
     ?MATRIX4_IDENTITY = frame:projection_matrix(Frame4),
+    alpha = frame:blend_mode(Frame4),
+    disabled = frame:depth_test(Frame4),
     Framebuffer = frame:gl_object(Frame4),
     GlTexture = texture:gl_object(frame:texture(Frame4)),
     {1, 1, ?COLOR_BLACK} = texture:remote_pixel(frame:texture(Frame4), 0, 0),
@@ -130,7 +135,6 @@ frame_resize_test() ->
     ?assertError(function_clause, frame:resize(Frame4, {1, 0})),
 
     ok = frame:destroy(Frame4),
-
     ok.
 
 frame_viewport_test() ->
@@ -144,7 +148,6 @@ frame_viewport_test() ->
     {1, 0, 1, 2} = frame:viewport(Frame1),
 
     ok = frame:destroy(Frame1),
-
     ok.
 
 frame_view_projection_test() ->
@@ -167,7 +170,6 @@ frame_view_projection_test() ->
     ?MATRIX4_IDENTITY = frame:projection_matrix(Frame2),
 
     ok = frame:destroy(Frame2),
-
     ok.
 
 frame_clear_test() ->
@@ -186,7 +188,6 @@ frame_clear_test() ->
     ]} = texture:remote_image(frame:texture(Frame)),
 
     ok = frame:destroy(Frame),
-
     ok.
 
 frame_draw_mesh2_test() ->
@@ -205,7 +206,6 @@ frame_draw_mesh2_test() ->
 
     ok = mesh2:destroy(Mesh),
     ok = frame:destroy(Frame),
-
     ok.
 
 frame_gl_object_test() ->
@@ -218,5 +218,156 @@ frame_gl_object_test() ->
     end),
 
     ok = frame:destroy(Frame),
-
     ok.
+
+frame_blend_depth_term_test() ->
+    ok = run_graphics(),
+
+    {ok, Frame0} = frame:with_size(?FRAME_SIZE),
+    none = frame:blend_mode(Frame0),
+    enabled = frame:depth_test(Frame0),
+
+    {ok, Frame1} = frame:set_blend_mode(Frame0, alpha),
+    none = frame:blend_mode(Frame0),
+    alpha = frame:blend_mode(Frame1),
+    enabled = frame:depth_test(Frame1),
+
+    {ok, Frame2} = frame:set_depth_test(Frame1, disabled),
+    enabled = frame:depth_test(Frame1),
+    disabled = frame:depth_test(Frame2),
+    alpha = frame:blend_mode(Frame2),
+
+    {ok, Frame3} = frame:set_blend_mode(Frame2, add),
+    add = frame:blend_mode(Frame3),
+    {ok, Frame4} = frame:set_blend_mode(Frame3, multiply),
+    multiply = frame:blend_mode(Frame4),
+    {ok, Frame5} = frame:set_blend_mode(Frame4, none),
+    none = frame:blend_mode(Frame5),
+
+    ?assertError(function_clause, frame:set_blend_mode(Frame5, replace)),
+    ?assertError(function_clause, frame:set_depth_test(Frame5, on)),
+
+    ok = frame:destroy(Frame5),
+    ok.
+
+frame_depth_keeps_first_test() ->
+    ok = run_graphics(),
+
+    {ok, Frame} = frame:with_size(?FRAME_SIZE),
+    {ok, Red} = full_quad(?COLOR_RED),
+    {ok, Blue} = full_quad(?COLOR_BLUE),
+    ok = frame:clear(Frame, ?COLOR_BLACK),
+    ok = frame:draw_mesh2(Frame, Red, triangle_fan, 4),
+    ok = frame:draw_mesh2(Frame, Blue, triangle_fan, 4),
+    assert_image(?RED_IMAGE, texture:remote_image(frame:texture(Frame))),
+
+    ok = mesh2:destroy(Red),
+    ok = mesh2:destroy(Blue),
+    ok = frame:destroy(Frame),
+    ok.
+
+frame_depth_disabled_replace_test() ->
+    ok = run_graphics(),
+
+    {ok, Frame0} = frame:with_size(?FRAME_SIZE),
+    {ok, Frame} = frame:set_depth_test(Frame0, disabled),
+    {ok, Red} = full_quad(?COLOR_RED),
+    {ok, Blue} = full_quad(?COLOR_BLUE),
+    ok = frame:clear(Frame, ?COLOR_BLACK),
+    ok = frame:draw_mesh2(Frame, Red, triangle_fan, 4),
+    ok = frame:draw_mesh2(Frame, Blue, triangle_fan, 4),
+    {2, 2, [
+        ?COLOR_BLUE, ?COLOR_BLUE,
+        ?COLOR_BLUE, ?COLOR_BLUE
+    ]} = texture:remote_image(frame:texture(Frame)),
+
+    ok = mesh2:destroy(Red),
+    ok = mesh2:destroy(Blue),
+    ok = frame:destroy(Frame),
+    ok.
+
+frame_blend_alpha_test() ->
+    ok = run_graphics(),
+
+    {ok, Frame0} = frame:with_size(?FRAME_SIZE),
+    {ok, Frame1} = frame:set_depth_test(Frame0, disabled),
+    {ok, Frame} = frame:set_blend_mode(Frame1, alpha),
+    {ok, Overlay} = full_quad({1.0, 0.0, 0.0, 0.5}),
+    ok = frame:clear(Frame, ?COLOR_BLUE),
+    ok = frame:draw_mesh2(Frame, Overlay, triangle_fan, 4),
+    {2, 2, Pixels} = texture:remote_image(frame:texture(Frame)),
+    assert_pixels({0.5, 0.0, 0.5, 0.75}, Pixels),
+
+    ok = mesh2:destroy(Overlay),
+    ok = frame:destroy(Frame),
+    ok.
+
+frame_blend_add_test() ->
+    ok = run_graphics(),
+
+    {ok, Frame0} = frame:with_size(?FRAME_SIZE),
+    {ok, Frame1} = frame:set_depth_test(Frame0, disabled),
+    {ok, Frame} = frame:set_blend_mode(Frame1, add),
+    {ok, Overlay} = full_quad({1.0, 0.0, 0.0, 0.5}),
+    ok = frame:clear(Frame, ?COLOR_BLUE),
+    ok = frame:draw_mesh2(Frame, Overlay, triangle_fan, 4),
+    {2, 2, Pixels} = texture:remote_image(frame:texture(Frame)),
+    assert_pixels({0.5, 0.0, 1.0, 1.0}, Pixels),
+
+    ok = mesh2:destroy(Overlay),
+    ok = frame:destroy(Frame),
+    ok.
+
+frame_blend_multiply_test() ->
+    ok = run_graphics(),
+
+    {ok, Frame0} = frame:with_size(?FRAME_SIZE),
+    {ok, Frame1} = frame:set_depth_test(Frame0, disabled),
+    {ok, Frame} = frame:set_blend_mode(Frame1, multiply),
+    {ok, Overlay} = full_quad(?COLOR_RED),
+    ok = frame:clear(Frame, ?COLOR_BLUE),
+    ok = frame:draw_mesh2(Frame, Overlay, triangle_fan, 4),
+    {2, 2, Pixels} = texture:remote_image(frame:texture(Frame)),
+    assert_pixels(?COLOR_BLACK, Pixels),
+
+    ok = mesh2:destroy(Overlay),
+    ok = frame:destroy(Frame),
+    ok.
+
+frame_blend_none_disables_test() ->
+    ok = run_graphics(),
+
+    {ok, Frame0} = frame:with_size(?FRAME_SIZE),
+    {ok, Frame1} = frame:set_depth_test(Frame0, disabled),
+    {ok, Frame2} = frame:set_blend_mode(Frame1, alpha),
+    {ok, Overlay} = full_quad({1.0, 0.0, 0.0, 0.5}),
+    {ok, Green} = full_quad(?COLOR_GREEN),
+    ok = frame:clear(Frame2, ?COLOR_BLUE),
+    ok = frame:draw_mesh2(Frame2, Overlay, triangle_fan, 4),
+    {ok, Frame3} = frame:set_blend_mode(Frame2, none),
+    ok = frame:draw_mesh2(Frame3, Green, triangle_fan, 4),
+    {2, 2, [
+        ?COLOR_GREEN, ?COLOR_GREEN,
+        ?COLOR_GREEN, ?COLOR_GREEN
+    ]} = texture:remote_image(frame:texture(Frame3)),
+
+    ok = mesh2:destroy(Overlay),
+    ok = mesh2:destroy(Green),
+    ok = frame:destroy(Frame3),
+    ok.
+
+full_quad(Color) ->
+    mesh2:with_vertices([
+        {{0.0, 0.0}, Color, 0.0, 0.0},
+        {{2.0, 0.0}, Color, 1.0, 0.0},
+        {{2.0, 2.0}, Color, 1.0, 1.0},
+        {{0.0, 2.0}, Color, 0.0, 1.0}
+    ]).
+
+assert_image(Expected, Expected) ->
+    ok.
+
+assert_pixels(Expected, Pixels) ->
+    lists:foreach(fun(Pixel) ->
+        true = color:is_equal_to(Expected, Pixel, 1.0 / 255.0)
+    end, Pixels).

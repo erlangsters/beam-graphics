@@ -225,7 +225,7 @@ the color and UV coordinates unchanged.
 -doc """
 2D mesh object.
 
-A collection of 2D vertices that can be rendered on a surface.
+A collection of 2D vertices that can be rendered on a frame or a surface.
 
 Use the `mesh2` module to create and manipulate 2D meshes.
 """.
@@ -234,7 +234,7 @@ Use the `mesh2` module to create and manipulate 2D meshes.
 -doc """
 3D mesh object.
 
-A collection of 3D vertices that can be rendered on a surface.
+A collection of 3D vertices that can be rendered on a frame or a surface.
 
 Use the `mesh3` module to create and manipulate 3D meshes.
 """.

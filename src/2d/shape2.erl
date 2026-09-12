@@ -23,7 +23,8 @@ The data structure of a 2D shape is the `#shape2{}` record (see
 `graphics.hrl`). The fields are a list of `{Mesh, PrimitiveType, VertexCount}`
 tuples, a 3x3 model matrix, and `no_texture` or a texture. Prefer the accessors
 over matching the record. The vertex count of each tuple is the draw count
-passed to `surface:draw_mesh2/4`; it is not necessarily `mesh2:vertex_count/1`.
+passed to `frame:draw_mesh2/4` or `surface:draw_mesh2/4`; it is not
+necessarily `mesh2:vertex_count/1`.
 
 ```erlang
 {ok, Shape} = shape2:triangle(

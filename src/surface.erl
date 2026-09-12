@@ -38,10 +38,17 @@ surface worker.
 Meshes are drawn on a surface with a primitive type and an optional texture.
 The primitive type and the texture are not part of the mesh; they are
 arguments of `draw_mesh2/4` and of `shape2`. The same holds for 3D meshes and
-`shape3`.
+`shape3`. The stock program modulates vertex color by the bound texture. That
+is tint, not framebuffer blending.
 
-View and projection matrices and the viewport live on the surface term and
-are applied when clearing or drawing. They are not read back from the GPU.
+The viewport, blend mode, and depth test live on the surface term and are
+applied when clearing or drawing. View and projection matrices live on the
+surface term and are applied when drawing. They are not read back from the
+GPU. The default is depth test `enabled` and blend mode `none`. Overlapping
+2D draws share Z and need `set_depth_test(Surface, disabled)`; transparent
+2D also needs `set_blend_mode(Surface, alpha)`. View and projection are 4x4
+matrices. A 2D view or camera matrix is 3x3; embed it with
+`matrix3:to_matrix4/1`.
 
 An empty surface is not allowed. Width and height must be at least 1.
 
@@ -58,7 +65,9 @@ while that context is current.
 
 -export_type([
     size/0,
-    viewport/0
+    viewport/0,
+    blend_mode/0,
+    depth_test/0
 ]).
 -export_type([
     object/0
@@ -77,6 +86,10 @@ while that context is current.
     set_view_matrix/2,
     projection_matrix/1,
     set_projection_matrix/2,
+    blend_mode/1,
+    set_blend_mode/2,
+    depth_test/1,
+    set_depth_test/2,
     clear/2,
     draw_mesh2/4, draw_mesh2/5, draw_mesh2/6,
     draw_mesh3/4, draw_mesh3/5, draw_mesh3/6,
@@ -101,7 +114,9 @@ while that context is current.
     size/1,
     viewport/1,
     view_matrix/1,
-    projection_matrix/1
+    projection_matrix/1,
+    blend_mode/1,
+    depth_test/1
 ]}).
 
 -include_lib("beam_graphics/include/graphics.hrl").
@@ -144,17 +159,35 @@ least 1.
 }.
 
 -doc """
+A surface blend mode.
+
+`none` disables blending. `alpha` composites with the source alpha. `add`
+adds the source, scaled by its alpha. `multiply` modulates with the color
+already in the surface. Custom factors stay on the OpenGL escape hatch.
+""".
+-type blend_mode() :: none | alpha | add | multiply.
+
+-doc """
+A surface depth test.
+
+`enabled` keeps closer fragments. `disabled` keeps the fragment last drawn.
+""".
+-type depth_test() :: enabled | disabled.
+
+-doc """
 A surface object.
 
-It wraps a worker process, the size, the viewport, and the view and
-projection matrices.
+It wraps a worker process, the size, the viewport, the view and projection
+matrices, the blend mode, and the depth test.
 """.
 -opaque object() :: {
     WorkerId :: worker:id(),
     Size :: size(),
     Viewport :: viewport(),
     ViewMatrix :: graphics:matrix4(),
-    ProjectionMatrix :: graphics:matrix4()
+    ProjectionMatrix :: graphics:matrix4(),
+    BlendMode :: blend_mode(),
+    DepthTest :: depth_test()
 }.
 
 -doc """
@@ -162,13 +195,15 @@ A pbuffer surface of a given size.
 
 It constructs a pbuffer surface of the given size. The view matrix is
 identity. The projection matrix is an orthographic projection of the size.
-The viewport is the full size.
+The viewport is the full size. The blend mode is `none`. The depth test is
+`enabled`.
 
 A running graphics context is required. The calling process is linked to the
 surface worker.
 
 Width and height must be at least 1. It returns `out_of_memory` when the GPU
-cannot allocate the default program.
+cannot allocate the default program. Other constructor failures are
+`{aborted, term()}`, `timeout`, or `{error, term()}`.
 """.
 -spec with_size(egl:display(), size()) ->
     {ok, object()} |
@@ -185,14 +220,16 @@ A window surface of a given size.
 
 It constructs a surface attached to the given native window. The view matrix
 is identity. The projection matrix is an orthographic projection of the size.
-The viewport is the full size.
+The viewport is the full size. The blend mode is `none`. The depth test is
+`enabled`.
 
 `Window` is an EGL native window handle. A running graphics context is
 required. The calling process is linked to the surface worker.
 
 Width and height must be at least 1. `Size` should match the window
 framebuffer. It returns `out_of_memory` when the GPU cannot allocate the
-default program.
+default program. Other constructor failures are `{aborted, term()}`,
+`timeout`, or `{error, term()}`.
 """.
 -spec with_window(egl:display(), term(), size()) ->
     {ok, object()} |
@@ -212,7 +249,7 @@ default program. Using the surface after it is destroyed has undefined
 behavior. Destroying the same surface twice is invalid.
 """.
 -spec destroy(object()) -> ok.
-destroy({WorkerId, _Size, _Viewport, _View, _Projection}) ->
+destroy({WorkerId, _Size, _Viewport, _View, _Projection, _Blend, _Depth}) ->
     {reply, ok} = surface_request(WorkerId, ?DESTROY_REQUEST),
     ok.
 
@@ -222,14 +259,15 @@ The size of a surface.
 It returns the width and height currently stored in the surface.
 """.
 -spec size(object()) -> size().
-size({_WorkerId, Size, _Viewport, _View, _Projection}) ->
+size({_WorkerId, Size, _Viewport, _View, _Projection, _Blend, _Depth}) ->
     Size.
 
 -doc """
 Resize a surface.
 
 It sets the size stored on the surface. The viewport is reset to the full new
-size. The view and projection matrices are unchanged.
+size. The view and projection matrices, the blend mode, and the depth test
+are unchanged.
 
 On a pbuffer, the EGL pbuffer is recreated. On a window, the drawable is not
 changed; the window owns that size.
@@ -239,7 +277,7 @@ cannot allocate the new pbuffer.
 """.
 -spec resize(object(), size()) -> {ok, object()} | out_of_memory.
 resize(
-    {WorkerId, _Size, _Viewport, ViewMatrix, ProjectionMatrix},
+    {WorkerId, _Size, _Viewport, ViewMatrix, ProjectionMatrix, BlendMode, DepthTest},
     {Width, Height} = Size
 ) when Width > 0, Height > 0 ->
     {reply, Reply} = surface_request(WorkerId, {resize, Size}),
@@ -252,7 +290,9 @@ resize(
                 Size,
                 {0, 0, Width, Height},
                 ViewMatrix,
-                ProjectionMatrix
+                ProjectionMatrix,
+                BlendMode,
+                DepthTest
             }}
     end.
 
@@ -262,7 +302,7 @@ The viewport of a surface.
 It returns the viewport last set on the surface.
 """.
 -spec viewport(object()) -> viewport().
-viewport({_WorkerId, _Size, Viewport, _View, _Projection}) ->
+viewport({_WorkerId, _Size, Viewport, _View, _Projection, _Blend, _Depth}) ->
     Viewport.
 
 -doc """
@@ -282,7 +322,7 @@ The view matrix of a surface.
 It returns the view matrix last set on the surface.
 """.
 -spec view_matrix(object()) -> graphics:matrix4().
-view_matrix({_WorkerId, _Size, _Viewport, ViewMatrix, _Projection}) ->
+view_matrix({_WorkerId, _Size, _Viewport, ViewMatrix, _Projection, _Blend, _Depth}) ->
     ViewMatrix.
 
 -doc """
@@ -301,7 +341,7 @@ The projection matrix of a surface.
 It returns the projection matrix last set on the surface.
 """.
 -spec projection_matrix(object()) -> graphics:matrix4().
-projection_matrix({_WorkerId, _Size, _Viewport, _View, ProjectionMatrix}) ->
+projection_matrix({_WorkerId, _Size, _Viewport, _View, ProjectionMatrix, _Blend, _Depth}) ->
     ProjectionMatrix.
 
 -doc """
@@ -315,13 +355,57 @@ set_projection_matrix(Surface, Matrix) ->
     {ok, erlang:setelement(5, Surface, Matrix)}.
 
 -doc """
+The blend mode of a surface.
+
+It returns the blend mode last set on the surface.
+""".
+-spec blend_mode(object()) -> blend_mode().
+blend_mode({_WorkerId, _Size, _Viewport, _View, _Projection, BlendMode, _Depth}) ->
+    BlendMode.
+
+-doc """
+Set the blend mode of a surface.
+
+It sets the blend mode stored on the surface. The mode is applied when
+clearing or drawing. Clearing writes the clear color directly; blending does
+not affect `clear/2`.
+""".
+-spec set_blend_mode(object(), blend_mode()) -> {ok, object()}.
+set_blend_mode(Surface, BlendMode)
+        when BlendMode =:= none; BlendMode =:= alpha;
+             BlendMode =:= add; BlendMode =:= multiply ->
+    {ok, erlang:setelement(6, Surface, BlendMode)}.
+
+-doc """
+The depth test of a surface.
+
+It returns the depth test last set on the surface.
+""".
+-spec depth_test(object()) -> depth_test().
+depth_test({_WorkerId, _Size, _Viewport, _View, _Projection, _Blend, DepthTest}) ->
+    DepthTest.
+
+-doc """
+Set the depth test of a surface.
+
+It sets the depth test stored on the surface. The policy is applied when
+clearing or drawing.
+""".
+-spec set_depth_test(object(), depth_test()) -> {ok, object()}.
+set_depth_test(Surface, DepthTest)
+        when DepthTest =:= enabled; DepthTest =:= disabled ->
+    {ok, erlang:setelement(7, Surface, DepthTest)}.
+
+-doc """
 Clear a surface.
 
 It fills the surface with the given color and resets the depth buffer.
 """.
 -spec clear(object(), graphics:color()) -> ok.
-clear({WorkerId, _Size, Viewport, _View, _Projection}, Color) ->
-    {reply, ok} = surface_request(WorkerId, {clear, Viewport, Color}),
+clear({WorkerId, _Size, Viewport, _View, _Projection, BlendMode, DepthTest}, Color) ->
+    {reply, ok} = surface_request(
+        WorkerId, {clear, Viewport, Color, BlendMode, DepthTest}
+    ),
     ok.
 
 -doc """
@@ -376,7 +460,7 @@ texture, and 3x3 model matrix.
     graphics:matrix3()
 ) -> ok.
 draw_mesh2(
-    {WorkerId, _Size, Viewport, ViewMatrix, ProjectionMatrix},
+    {WorkerId, _Size, Viewport, ViewMatrix, ProjectionMatrix, BlendMode, DepthTest},
     Mesh,
     PrimitiveType,
     VertexCount,
@@ -393,7 +477,9 @@ draw_mesh2(
         PrimitiveType,
         VertexCount,
         Texture,
-        matrix3:to_matrix4(Matrix3)
+        matrix3:to_matrix4(Matrix3),
+        BlendMode,
+        DepthTest
     },
     {reply, ok} = surface_request(WorkerId, Request),
     ok.
@@ -450,7 +536,7 @@ texture, and 4x4 model matrix.
     graphics:matrix4()
 ) -> ok.
 draw_mesh3(
-    {WorkerId, _Size, Viewport, ViewMatrix, ProjectionMatrix},
+    {WorkerId, _Size, Viewport, ViewMatrix, ProjectionMatrix, BlendMode, DepthTest},
     Mesh,
     PrimitiveType,
     VertexCount,
@@ -467,7 +553,9 @@ draw_mesh3(
         PrimitiveType,
         VertexCount,
         Texture,
-        Matrix
+        Matrix,
+        BlendMode,
+        DepthTest
     },
     {reply, ok} = surface_request(WorkerId, Request),
     ok.
@@ -516,7 +604,7 @@ Display a surface.
 It presents the surface. On a window, the back buffer becomes visible.
 """.
 -spec display(object()) -> ok.
-display({WorkerId, _Size, _Viewport, _View, _Projection}) ->
+display({WorkerId, _Size, _Viewport, _View, _Projection, _Blend, _Depth}) ->
     {reply, ok} = surface_request(WorkerId, display),
     ok.
 
@@ -531,7 +619,7 @@ first pixel. OpenGL `read_pixels` origin is the lower-left corner. Surface
 does not flip the image.
 """.
 -spec image(object()) -> graphics:image().
-image({WorkerId, {Width, Height}, _Viewport, _View, _Projection}) ->
+image({WorkerId, {Width, Height}, _Viewport, _View, _Projection, _Blend, _Depth}) ->
     {reply, Data} = surface_request(WorkerId, {raw_pixels, Width, Height}),
     {Width, Height, data_to_pixels(Data)}.
 
@@ -545,7 +633,7 @@ If the function raises, it returns `{error, {exception, Class, Reason}}` and
 the surface stays running.
 """.
 -spec gl_commands(object(), fun(() -> term())) -> term().
-gl_commands({WorkerId, _Size, _Viewport, _View, _Projection}, Commands) ->
+gl_commands({WorkerId, _Size, _Viewport, _View, _Projection, _Blend, _Depth}, Commands) ->
     {reply, Reply} = surface_request(WorkerId, {gl_commands, Commands}),
     Reply.
 
@@ -604,20 +692,20 @@ handle_request({resize, _Size}, _From, #state{surface = {window, _}} = State) ->
     {reply, ok, State};
 
 handle_request(
-    {clear, Viewport, {Red, Green, Blue, Alpha}},
+    {clear, Viewport, {Red, Green, Blue, Alpha}, BlendMode, DepthTest},
     _From,
     State
 ) ->
     {X, Y, Width, Height} = Viewport,
     ok = gl:viewport(X, Y, Width, Height),
-    ok = gl:enable(depth_test),
+    ok = apply_pipeline(BlendMode, DepthTest),
     ok = gl:clear_color(Red, Green, Blue, Alpha),
     ok = gl:clear([color_buffer_bit, depth_buffer_bit]),
     {reply, ok, State};
 
 handle_request(
     {draw, Viewport, ViewMatrix, ProjectionMatrix, Mesh, PrimitiveType,
-     VertexCount, Texture, ModelMatrix},
+     VertexCount, Texture, ModelMatrix, BlendMode, DepthTest},
     _From,
     #state{
         program = Program,
@@ -630,7 +718,7 @@ handle_request(
     GlProgram = program:gl_object(Program),
     {X, Y, Width, Height} = Viewport,
     ok = gl:viewport(X, Y, Width, Height),
-    ok = gl:enable(depth_test),
+    ok = apply_pipeline(BlendMode, DepthTest),
     ok = gl:use_program(GlProgram),
     ok = gl:active_texture(texture0),
     ok = gl:program_uniform_matrix(
@@ -732,7 +820,9 @@ spawn_surface(Display, Window, Width, Height) ->
                 {Width, Height},
                 {0, 0, Width, Height},
                 ?MATRIX4_IDENTITY,
-                default_projection_matrix(Width, Height)
+                default_projection_matrix(Width, Height),
+                none,
+                enabled
             }};
         {aborted, out_of_memory} ->
             out_of_memory;
@@ -821,6 +911,7 @@ finish_initialize(Display, Config, Context, SurfaceType, EglSurface) ->
             ok = gl:program_uniform(i, GlProgram, TextureLocation, 0),
             ok = gl:active_texture(texture0),
             ok = gl:enable(depth_test),
+            ok = gl:disable(blend),
             ok = gl:front_face(ccw),
             {continue, #state{
                 display = Display,
@@ -887,6 +978,27 @@ bind_mesh({mesh3, Buffer}) ->
     gl:vertex_attrib_format(2, 2, float, false, (3 + 4) * 4),
     gl:vertex_attrib_binding(2, 0),
     gl:enable_vertex_attrib_array(2).
+
+apply_pipeline(BlendMode, DepthTest) ->
+    case DepthTest of
+        enabled ->
+            ok = gl:enable(depth_test);
+        disabled ->
+            ok = gl:disable(depth_test)
+    end,
+    case BlendMode of
+        none ->
+            ok = gl:disable(blend);
+        alpha ->
+            ok = gl:enable(blend),
+            ok = gl:blend_func(src_alpha, one_minus_src_alpha);
+        add ->
+            ok = gl:enable(blend),
+            ok = gl:blend_func(src_alpha, one);
+        multiply ->
+            ok = gl:enable(blend),
+            ok = gl:blend_func(dst_color, zero)
+    end.
 
 default_projection_matrix(Width, Height) ->
     view3:orthographic(

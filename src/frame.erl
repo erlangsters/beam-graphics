@@ -16,6 +16,7 @@ A frame is an offscreen 2D image that is typically used as a render target.
 A frame is an opaque object that wraps a GPU framebuffer, a color texture, and
 a hidden depth buffer. It is created with the `with_size` function and disposed
 with the `destroy/1` function. Copying the term does not copy the GPU objects.
+A running graphics context is required.
 
 A frame is not a surface. A surface presents to a window or a pbuffer. A frame
 is sampled later as a texture, with no presentation and no CPU round-trip.
@@ -38,9 +39,16 @@ frame is the draw target is undefined.
 Meshes are drawn on a frame with a primitive type and an optional texture. The
 primitive type and the texture are not part of the mesh; they are arguments of
 `draw_mesh2/4` and of `shape2`. The same holds for 3D meshes and `shape3`.
+The stock program modulates vertex color by the bound texture. That is tint,
+not framebuffer blending.
 
-View and projection matrices and the viewport live on the frame term and are
-applied when clearing or drawing. They are not read back from the GPU.
+The viewport, blend mode, and depth test live on the frame term and are
+applied when clearing or drawing. View and projection matrices live on the
+frame term and are applied when drawing. They are not read back from the GPU.
+The default is depth test `enabled` and blend mode `none`. Overlapping 2D
+draws share Z and need `set_depth_test(Frame, disabled)`; transparent 2D also
+needs `set_blend_mode(Frame, alpha)`. View and projection are 4x4 matrices. A
+2D view or camera matrix is 3x3; embed it with `matrix3:to_matrix4/1`.
 
 An empty frame is not allowed. Width and height must be at least 1.
 
@@ -56,7 +64,9 @@ framebuffer id. The color texture id is `texture:gl_object(frame:texture(Frame))
 
 -export_type([
     size/0,
-    viewport/0
+    viewport/0,
+    blend_mode/0,
+    depth_test/0
 ]).
 -export_type([
     object/0
@@ -76,6 +86,10 @@ framebuffer id. The color texture id is `texture:gl_object(frame:texture(Frame))
     set_view_matrix/2,
     projection_matrix/1,
     set_projection_matrix/2,
+    blend_mode/1,
+    set_blend_mode/2,
+    depth_test/1,
+    set_depth_test/2,
     clear/2,
     draw_mesh2/4, draw_mesh2/5, draw_mesh2/6,
     draw_mesh3/4, draw_mesh3/5, draw_mesh3/6,
@@ -89,7 +103,9 @@ framebuffer id. The color texture id is `texture:gl_object(frame:texture(Frame))
     gl_object/1,
     viewport/1,
     view_matrix/1,
-    projection_matrix/1
+    projection_matrix/1,
+    blend_mode/1,
+    depth_test/1
 ]}).
 
 -include_lib("gl/include/gl.hrl").
@@ -119,11 +135,27 @@ least 1.
 }.
 
 -doc """
+A frame blend mode.
+
+`none` disables blending. `alpha` composites with the source alpha. `add`
+adds the source, scaled by its alpha. `multiply` modulates with the color
+already in the frame. Custom factors stay on the OpenGL escape hatch.
+""".
+-type blend_mode() :: none | alpha | add | multiply.
+
+-doc """
+A frame depth test.
+
+`enabled` keeps closer fragments. `disabled` keeps the fragment last drawn.
+""".
+-type depth_test() :: enabled | disabled.
+
+-doc """
 A frame object.
 
 It wraps an OpenGL framebuffer id, a depth renderbuffer id, the size, the
-owned color texture, the default program used to draw, the viewport, and the
-view and projection matrices.
+owned color texture, the default program used to draw, the viewport, the
+view and projection matrices, the blend mode, and the depth test.
 """.
 -opaque object() :: {
     ResourceId :: {frame, gl:framebuffer(), gl:renderbuffer()},
@@ -132,7 +164,9 @@ view and projection matrices.
     Program :: program:object(),
     Viewport :: viewport(),
     ViewMatrix :: graphics:matrix4(),
-    ProjectionMatrix :: graphics:matrix4()
+    ProjectionMatrix :: graphics:matrix4(),
+    BlendMode :: blend_mode(),
+    DepthTest :: depth_test()
 }.
 
 -doc """
@@ -141,7 +175,7 @@ A frame of a given size.
 It constructs a frame of the given size. The color texture uses the `linear`
 color space and no local copy is kept. The view matrix is identity. The
 projection matrix is an orthographic projection of the size. The viewport is
-the full size.
+the full size. The blend mode is `none`. The depth test is `enabled`.
 
 Width and height must be at least 1. It returns `out_of_memory` when the GPU
 cannot allocate the framebuffer, the color texture, or the default program.
@@ -167,7 +201,9 @@ with_size({Width, Height}) when Width > 0, Height > 0 ->
                                 Program,
                                 {0, 0, Width, Height},
                                 ?MATRIX4_IDENTITY,
-                                default_projection_matrix(Width, Height)
+                                default_projection_matrix(Width, Height),
+                                none,
+                                enabled
                             },
                             {ok, Frame};
                         Error ->
@@ -194,7 +230,7 @@ it is destroyed has undefined behavior. Destroying the same frame twice is
 invalid.
 """.
 -spec destroy(object()) -> ok.
-destroy({ResourceId, _Size, Texture, Program, _Viewport, _View, _Projection}) ->
+destroy({ResourceId, _Size, Texture, Program, _Viewport, _View, _Projection, _Blend, _Depth}) ->
     ok = release_frame(ResourceId),
     ok = texture:destroy(Texture),
     ok = program:destroy(Program),
@@ -206,7 +242,7 @@ The size of a frame.
 It returns the width and height currently stored in the frame.
 """.
 -spec size(object()) -> size().
-size({_ResourceId, Size, _Texture, _Program, _Viewport, _View, _Projection}) ->
+size({_ResourceId, Size, _Texture, _Program, _Viewport, _View, _Projection, _Blend, _Depth}) ->
     Size.
 
 -doc """
@@ -215,14 +251,16 @@ Resize a frame.
 It reallocates the color texture and the depth buffer to the given size. The
 framebuffer id and the texture id are unchanged. Existing pixels are discarded
 and the color texture is filled with black. The viewport is reset to the full
-new size. The view and projection matrices are unchanged.
+new size. The view and projection matrices, the blend mode, and the depth
+test are unchanged.
 
 Width and height must be at least 1. It returns `out_of_memory` when the GPU
 cannot allocate the new data store.
 """.
 -spec resize(object(), size()) -> {ok, object()} | out_of_memory.
 resize(
-    {ResourceId, _Size, Texture, Program, _Viewport, ViewMatrix, ProjectionMatrix},
+    {ResourceId, _Size, Texture, Program, _Viewport, ViewMatrix, ProjectionMatrix,
+     BlendMode, DepthTest},
     {Width, Height} = Size
 ) when Width > 0, Height > 0 ->
     case texture:resize(Texture, Size) of
@@ -241,7 +279,9 @@ resize(
                         Program,
                         {0, 0, Width, Height},
                         ViewMatrix,
-                        ProjectionMatrix
+                        ProjectionMatrix,
+                        BlendMode,
+                        DepthTest
                     },
                     {ok, NewFrame}
             end
@@ -254,7 +294,7 @@ It returns the color texture owned by the frame. The texture is destroyed with
 the frame. Do not destroy it independently.
 """.
 -spec texture(object()) -> graphics:texture().
-texture({_ResourceId, _Size, Texture, _Program, _Viewport, _View, _Projection}) ->
+texture({_ResourceId, _Size, Texture, _Program, _Viewport, _View, _Projection, _Blend, _Depth}) ->
     Texture.
 
 -doc """
@@ -263,7 +303,7 @@ The OpenGL framebuffer of a frame.
 It returns the OpenGL framebuffer id wrapped by the frame.
 """.
 -spec gl_object(object()) -> gl:framebuffer().
-gl_object({{frame, Framebuffer, _Renderbuffer}, _Size, _Texture, _Program, _Viewport, _View, _Projection}) ->
+gl_object({{frame, Framebuffer, _Renderbuffer}, _Size, _Texture, _Program, _Viewport, _View, _Projection, _Blend, _Depth}) ->
     Framebuffer.
 
 -doc """
@@ -272,7 +312,7 @@ The viewport of a frame.
 It returns the viewport last set on the frame.
 """.
 -spec viewport(object()) -> viewport().
-viewport({_ResourceId, _Size, _Texture, _Program, Viewport, _View, _Projection}) ->
+viewport({_ResourceId, _Size, _Texture, _Program, Viewport, _View, _Projection, _Blend, _Depth}) ->
     Viewport.
 
 -doc """
@@ -292,7 +332,7 @@ The view matrix of a frame.
 It returns the view matrix last set on the frame.
 """.
 -spec view_matrix(object()) -> graphics:matrix4().
-view_matrix({_ResourceId, _Size, _Texture, _Program, _Viewport, ViewMatrix, _Projection}) ->
+view_matrix({_ResourceId, _Size, _Texture, _Program, _Viewport, ViewMatrix, _Projection, _Blend, _Depth}) ->
     ViewMatrix.
 
 -doc """
@@ -311,7 +351,7 @@ The projection matrix of a frame.
 It returns the projection matrix last set on the frame.
 """.
 -spec projection_matrix(object()) -> graphics:matrix4().
-projection_matrix({_ResourceId, _Size, _Texture, _Program, _Viewport, _View, ProjectionMatrix}) ->
+projection_matrix({_ResourceId, _Size, _Texture, _Program, _Viewport, _View, ProjectionMatrix, _Blend, _Depth}) ->
     ProjectionMatrix.
 
 -doc """
@@ -325,20 +365,63 @@ set_projection_matrix(Frame, Matrix) ->
     {ok, erlang:setelement(7, Frame, Matrix)}.
 
 -doc """
+The blend mode of a frame.
+
+It returns the blend mode last set on the frame.
+""".
+-spec blend_mode(object()) -> blend_mode().
+blend_mode({_ResourceId, _Size, _Texture, _Program, _Viewport, _View, _Projection, BlendMode, _Depth}) ->
+    BlendMode.
+
+-doc """
+Set the blend mode of a frame.
+
+It sets the blend mode stored on the frame. The mode is applied when clearing
+or drawing. Clearing writes the clear color directly; blending does not
+affect `clear/2`.
+""".
+-spec set_blend_mode(object(), blend_mode()) -> {ok, object()}.
+set_blend_mode(Frame, BlendMode)
+        when BlendMode =:= none; BlendMode =:= alpha;
+             BlendMode =:= add; BlendMode =:= multiply ->
+    {ok, erlang:setelement(8, Frame, BlendMode)}.
+
+-doc """
+The depth test of a frame.
+
+It returns the depth test last set on the frame.
+""".
+-spec depth_test(object()) -> depth_test().
+depth_test({_ResourceId, _Size, _Texture, _Program, _Viewport, _View, _Projection, _Blend, DepthTest}) ->
+    DepthTest.
+
+-doc """
+Set the depth test of a frame.
+
+It sets the depth test stored on the frame. The policy is applied when
+clearing or drawing.
+""".
+-spec set_depth_test(object(), depth_test()) -> {ok, object()}.
+set_depth_test(Frame, DepthTest)
+        when DepthTest =:= enabled; DepthTest =:= disabled ->
+    {ok, erlang:setelement(9, Frame, DepthTest)}.
+
+-doc """
 Clear a frame.
 
 It fills the color texture with the given color and resets the depth buffer.
 """.
 -spec clear(object(), graphics:color()) -> ok.
 clear(
-    {{frame, Framebuffer, _Renderbuffer}, _Size, _Texture, _Program, Viewport, _View, _Projection},
+    {{frame, Framebuffer, _Renderbuffer}, _Size, _Texture, _Program, Viewport,
+     _View, _Projection, BlendMode, DepthTest},
     {Red, Green, Blue, Alpha}
 ) ->
     ok = graphics_context:execute_commands(fun() ->
         ok = gl:bind_framebuffer(framebuffer, Framebuffer),
         {X, Y, Width, Height} = Viewport,
         ok = gl:viewport(X, Y, Width, Height),
-        ok = gl:enable(depth_test),
+        ok = apply_pipeline(BlendMode, DepthTest),
         ok = gl:clear_color(Red, Green, Blue, Alpha),
         ok = gl:clear([color_buffer_bit, depth_buffer_bit]),
         ok = gl:bind_framebuffer(framebuffer, 0),
@@ -403,7 +486,9 @@ draw_mesh2(
         Program,
         Viewport,
         ViewMatrix,
-        ProjectionMatrix
+        ProjectionMatrix,
+        BlendMode,
+        DepthTest
     },
     Mesh,
     PrimitiveType,
@@ -420,6 +505,8 @@ draw_mesh2(
         Framebuffer,
         Viewport,
         program:gl_object(Program),
+        BlendMode,
+        DepthTest,
         {{mesh2, Buffer}, PrimitiveType, VertexCount, Texture}
     ),
     ok.
@@ -481,7 +568,9 @@ draw_mesh3(
         Program,
         Viewport,
         ViewMatrix,
-        ProjectionMatrix
+        ProjectionMatrix,
+        BlendMode,
+        DepthTest
     },
     Mesh,
     PrimitiveType,
@@ -498,6 +587,8 @@ draw_mesh3(
         Framebuffer,
         Viewport,
         program:gl_object(Program),
+        BlendMode,
+        DepthTest,
         {{mesh3, Buffer}, PrimitiveType, VertexCount, Texture}
     ),
     ok.
@@ -541,14 +632,14 @@ draw_shape3(
     end, Meshes).
 
 frame_draw(
-    Framebuffer, Viewport, Program,
+    Framebuffer, Viewport, Program, BlendMode, DepthTest,
     {Mesh, PrimitiveType, VertexCount, Texture}
 ) ->
     ok = graphics_context:execute_commands(fun() ->
         ok = gl:bind_framebuffer(framebuffer, Framebuffer),
         {X, Y, Width, Height} = Viewport,
         ok = gl:viewport(X, Y, Width, Height),
-        ok = gl:enable(depth_test),
+        ok = apply_pipeline(BlendMode, DepthTest),
 
         ok = gl:use_program(Program),
         ok = gl:active_texture(texture0),
@@ -611,6 +702,27 @@ frame_draw(
         ok
     end),
     ok.
+
+apply_pipeline(BlendMode, DepthTest) ->
+    case DepthTest of
+        enabled ->
+            ok = gl:enable(depth_test);
+        disabled ->
+            ok = gl:disable(depth_test)
+    end,
+    case BlendMode of
+        none ->
+            ok = gl:disable(blend);
+        alpha ->
+            ok = gl:enable(blend),
+            ok = gl:blend_func(src_alpha, one_minus_src_alpha);
+        add ->
+            ok = gl:enable(blend),
+            ok = gl:blend_func(src_alpha, one);
+        multiply ->
+            ok = gl:enable(blend),
+            ok = gl:blend_func(dst_color, zero)
+    end.
 
 default_projection_matrix(Width, Height) ->
     view3:orthographic(

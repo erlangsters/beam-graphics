@@ -20,8 +20,9 @@ function. Copying the term does not copy the GPU texture.
 The CPU-side payload is an `image()`: a width, a height, and a row-major list
 of RGBA colors (see `graphics:image()`). Textures are sampled when a 2D or 3D
 mesh is drawn with a texture argument. The primitive type and the texture are
-not part of the mesh; they are arguments of `surface:draw_mesh2/5`,
-`surface:draw_mesh3/5`, and of `shape2` / `shape3`.
+not part of the mesh; they are arguments of `frame:draw_mesh2/5`,
+`surface:draw_mesh2/5`, `frame:draw_mesh3/5`, `surface:draw_mesh3/5`, and of
+`shape2` / `shape3`.
 
 ```erlang
 {ok, Texture} = texture:with_image({2, 2, [
