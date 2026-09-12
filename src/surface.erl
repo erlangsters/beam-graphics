@@ -39,7 +39,8 @@ Meshes are drawn on a surface with a primitive type and an optional texture.
 The primitive type and the texture are not part of the mesh; they are
 arguments of `draw_mesh2/4` and of `shape2`. The same holds for 3D meshes and
 `shape3`. The stock program modulates vertex color by the bound texture. That
-is tint, not framebuffer blending.
+is tint, not framebuffer blending. Draw does not take a program. The surface
+owns the stock pipeline.
 
 The viewport, blend mode, and depth test live on the surface term and are
 applied when clearing or drawing. View and projection matrices live on the
@@ -58,7 +59,9 @@ floats, not integers.
 **OpenGL Internals**
 
 A surface has its own OpenGL context. Use `gl_commands/2` to run OpenGL calls
-while that context is current.
+while that context is current. Custom shaders are not a draw argument. Build
+a `program`, take `program:gl_object/1`, and issue GL calls through
+`gl_commands/2`.
 """.
 
 -behavior(worker).
@@ -627,7 +630,8 @@ image({WorkerId, {Width, Height}, _Viewport, _View, _Projection, _Blend, _Depth}
 Run OpenGL commands on a surface.
 
 It runs the given function on the surface worker. The OpenGL context is
-current. The return value is the function's return value.
+current. The return value is the function's return value. Custom shaders
+use this path with `program:gl_object/1`.
 
 If the function raises, it returns `{error, {exception, Class, Reason}}` and
 the surface stays running.

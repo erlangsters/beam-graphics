@@ -40,7 +40,8 @@ Meshes are drawn on a frame with a primitive type and an optional texture. The
 primitive type and the texture are not part of the mesh; they are arguments of
 `draw_mesh2/4` and of `shape2`. The same holds for 3D meshes and `shape3`.
 The stock program modulates vertex color by the bound texture. That is tint,
-not framebuffer blending.
+not framebuffer blending. Draw does not take a program. The frame owns the
+stock pipeline.
 
 The viewport, blend mode, and depth test live on the frame term and are
 applied when clearing or drawing. View and projection matrices live on the
@@ -60,6 +61,9 @@ floats, not integers.
 A frame wraps an OpenGL framebuffer object, a color texture attachment, and a
 depth renderbuffer that is not exposed. Use `gl_object/1` to retrieve the
 framebuffer id. The color texture id is `texture:gl_object(frame:texture(Frame))`.
+Custom shaders are not a draw argument. Build a `program`, take
+`program:gl_object/1`, and issue GL calls through
+`graphics_context:execute_commands/1` with this framebuffer bound.
 """.
 
 -export_type([
