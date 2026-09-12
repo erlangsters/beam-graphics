@@ -1,245 +1,365 @@
 # 2D Rendering
 
-This document covers in details how to use the BEAM graphics library for 2D
-rendering.
+This document covers how to use the BEAM graphics library for 2D rendering.
 
-Familiarity with 3D rendering and its mathematical are not immeidately needed
-but will make the reading less heavy than it should be
+2D and 3D share draw targets, textures, and programs. They do not share
+vectors, matrices, meshes, or shapes. The 3D counterpart is
+[3D Rendering](going-3d.md).
+
+The stock pipeline treats a 2D position as a 3D position with Z set to `0.0`.
+The 2D modules exist so that path does not have to be written by hand.
+
+Include `graphics.hrl` for the named color and matrix macros used below.
+
+```erlang
+-include_lib("beam_graphics/include/graphics.hrl").
+```
 
 **Table of Contents**
 
-- The 2D-related primitives
-  - The 2D vector
-  - The 3x3 matrix
-  - The 2D vertex
-  - The 2D box
-  - The 2D transformations
-  - The 2D view
-- Drawing a 2D object
-- Transforming a 2D object
-- Adjusting the 2D view
-- Optimizing the drawing.
-- Advanced custom 2D rendering
-- Bonus: rendering an image
+- [Values](#values)
+- [View and camera](#view-and-camera)
+- [Draw target](#draw-target)
+- [Drawing with shapes](#drawing-with-shapes)
+- [Drawing with meshes](#drawing-with-meshes)
+- [Transforming](#transforming)
+- [Adjusting the view](#adjusting-the-view)
+- [Next steps](#next-steps)
 
-Note that 2D rendering is nothing but 3D rendering with a view constrainted to a
-certain position, and restricting teh geomery to Z = 0.
+## Values
 
-The API provides, for conveninence, 2D primitives where you don't have to deal
-with the 3D component. It results in reduced verbose code.
-
-## The 2D-related primitives
-
-If you plan to render 2D objects exclusively and do not need advanced
-rendering (going low-level with OpenGL directly), you'll be using the following
-primitives.
-
-- `vector2`
-- `matrix3`
-- `vertex2`
-- `box2`
-- `transform2`
-- `view2`
-
-Any experienced graphics programmer are already familiar with them. Let's cover
-them one by one.
+A well-formed 2D value uses floats, not integers. Invalid tuple shape is
+`function_clause`.
 
 ### The 2D vector
 
-It's just the classical 2-component vectors needed in many sceneraios.
-To describe
-It supports common operations.
-There data structure simply is a tuple of floats.
+A 2D vector is a pair of floats. Tuple syntax is the constructor.
 
 ```erlang
--type vector2() :: {float(), float()}.
+V = {3.0, 4.0}.
+3.0 = vector2:x(V).
+4.0 = vector2:y(V).
+5.0 = vector2:length(V).
+{0.6, 0.8} = vector2:normalize(V).
 ```
 
-To be written.
+`vector2:multiply/2` is scalar multiplication. The 2D cross product is a
+scalar. Rotation is counter-clockwise around the origin. Polar conversion
+(`to_angle/1`, `from_angle/1`) is 2D-only.
 
-```erlang
-vector2:length({4, 2}).
-```
-
-```erlang
-vector2:normalize({4, 2}).
-```
-
-See the the API reference for more info.
+See the `vector2` module.
 
 ### The 3x3 matrix
 
-The 3x3 matrix is a raw mathematical concept that allows the common 2D
-transformation such as translation, rotation, skewing, etc.
-
-They're not intuitive and hard to use, however, it's an essential part in 2D
-rendering.
-
-Many part of the API naturally expects a matrix, such as when you draw
-vertices or when setting the view of a surface.
-
-However, to make it easy, `transform2` constructs 3x3 matrices for common
-translation, rotation, and scale operations.
+A 3x3 matrix is a flat 9-float tuple in column-major order. It is the 2D
+transform type. Prefer `transform2` for translation, rotation, and scale.
 
 ```erlang
-matrix3:new().
+I = matrix3:identity().
+{11.0, 22.0} = matrix3:multiply_vector(
+    transform2:translation({10.0, 20.0}),
+    {1.0, 2.0}
+).
 ```
 
-To be written.
+`matrix3:multiply/2` is the matrix product. `matrix3:scale/2` is scalar
+multiplication. `matrix3:multiply_vector/2` treats the vector as a point
+(homogeneous `w = 1.0`). Embed a 3x3 as a 4x4 with `matrix3:to_matrix4/1`
+when a surface or frame needs a view or projection matrix.
+
+See the `matrix3` module.
+
+### Color
+
+A color is `{Red, Green, Blue, Alpha}`. Channels are floats, typically in
+`[0.0, 1.0]`. There is one color type for 2D and 3D.
+
+```erlang
+{1.0, 0.0, 0.0, 1.0} = color:rgb(1.0, 0.0, 0.0).
+?COLOR_RED = {1.0, 0.0, 0.0, 1.0}.
+```
+
+See the `color` module.
 
 ### The 2D vertex
 
-The only drawable primitives is a list of vertices describing the geometry of
-objects.
+A 2D vertex is `{Position, Color, U, V}`. There is no `vertex2` module.
 
-A vertex describes
+```erlang
+{{100.0, 100.0}, ?COLOR_RED, 0.0, 0.0}.
+```
 
-- the 2D position
-- a color
-- a 2D coordinate called UV
-
-Later, combined into a list, and by specifying a drawing primitives.
+`U` and `V` are texture coordinates. Generated solid shapes use `{0.0, 0.0}`.
+Textured quads use the unit square; see [Texturing](texturing.md).
 
 ### The 2D box
 
-In a 2D plane, it's frequently needed to define the box that contains a number
-of objects.
-
-The 2D box simply describes this rectangle and provides operations.
+A 2D box is `{Min, Max}`. `Min =< Max` per component. Tuple syntax is the
+constructor.
 
 ```erlang
-box2:from_vertices(V).
-
+Box = {{0.0, 0.0}, {10.0, 20.0}}.
+{5.0, 10.0} = box2:center(Box).
+true = box2:contains(Box, {5.0, 5.0}).
 ```
 
-To be written.
+`from_center_size/2` uses full width and height, not half-extents. A rotated
+box is a larger axis-aligned box; that rebuild lives on
+`transform2:transform_box/2`.
+
+See the `box2` module.
+
+### The 2D transform
+
+There is no transform type. `transform2` constructs and applies 3x3 matrices.
+
+Nouns construct (`translation/1`, `rotation/1`, `scale/1`). Verbs combine
+(`translate/2`, `rotate/2`, `scale/2`) by post-multiplying, so the new
+operation runs in local space.
 
 ```erlang
-box2:intersects(B1, B2).
+M = transform2:compose({100.0, 50.0}, math:pi() / 4.0, {2.0, 2.0}).
+{110.0, 70.0} = transform2:transform_point(
+    transform2:translation({10.0, 20.0}),
+    {100.0, 50.0}
+).
 ```
 
-To be written.
+`compose/3` is translate after rotate after scale, with a zero origin.
+`compose/4` inserts `T(-Origin)` first. `decompose/1` is 2D-only and assumes
+no shear.
 
-### The 2D transformations
+See the `transform2` module.
 
-At some point 2D transformation must be specified. The raw solution to this is
-a 3x3 matrix. `transform2` constructs those matrices for common operations.
+## View and camera
+
+A 2D view is a 3x3 projection matrix. A 2D camera is an observer pose. They
+are separate on purpose: the view is `uProjection`, the camera is `uView`.
+
+There is no view wrapper type. `view2:orthographic/4` maps a rectangle of
+view space to clip space. Y increases upward when Bottom is less than Top.
 
 ```erlang
-M = transform2:translate(matrix3:identity(), {50.0, -100.0}).
+P = view2:orthographic(0.0, 640.0, 0.0, 480.0).
+P = view2:orthographic({{0.0, 0.0}, {640.0, 480.0}}).
 ```
 
-### The 2D view
-
-
-To be written.
-
-
-## Drawing a 2D object
-
-Whether you're rendering 2D or 3D objects, rendering is always done on a
-surface which represents the resulting 2D image. Therefore a surface must first
-be created.
+A 2D camera is `{Center, Rotation, Zoom}`.
 
 ```erlang
-S = surface:new:({640, 480}).
+Camera = camera2:from_center({320.0, 240.0}).
+{{320.0, 240.0}, 0.0, 1.0} = Camera.
+V = camera2:view_matrix(Camera).
 ```
 
-Before drawing anything on it, let's clear out the surface with a solid color.
-How about a black so we can display a nice tricolor triangle.
+Rotation is counter-clockwise in the world. Zoom greater than `1.0` makes
+objects appear larger. A 2D camera does not convert to a 3D camera.
+
+See the `view2` and `camera2` modules.
+
+## Draw target
+
+Rendering needs a running graphics context and a draw target.
 
 ```erlang
-ok = surface:clear(S, ?COLOR_BLACK).
+Display = egl:get_display(default_display),
+{ok, {_, _}} = egl:initialize(Display),
+ok = graphics:initialize(Display).
 ```
 
-You can only render vertices, using one of the 5 drawing primitives.
+A **surface** presents. A pbuffer is created with `surface:with_size/2`. A
+window is created with `surface:with_window/3`; see
+[Display on a Window](display-window.md). `image/1` reads CPU pixels.
+`display/1` presents.
 
-- POINTS
-- LINE_STRIP
-- LINE_LOOP
-- LINES
-- TRIANGLE_STRIP,
-- TRIANGLE_FAN
-- TRIANGLES
+A **frame** is offscreen. Its result is a GPU texture, with no presentation
+and no CPU round-trip. See [Texturing](texturing.md).
 
-How to render advanced 2D objects using those drawing primtives is outside
-the scope of this documentation. For that, refer to some OpenGL tutorials.
-
-For this demo, we'll draw a simple triangle.
+There is no `surface2` or `frame2`. The same draw target accepts 2D and 3D
+draws.
 
 ```erlang
-V = [
-    #vertex2{pos={3, 2}, color=?COLOR_RED},
-    #vertex2{pos={3, 2}, color=?COLOR_RED},
-    #vertex2{pos={3, 2}, color=?COLOR_RED}
-]
-surface:draw(V, ?TRIANGLE).
+{ok, Surface} = surface:with_size(Display, {640, 480}),
+ok = surface:clear(Surface, ?COLOR_BLACK).
 ```
 
-To finalize the rendering, the `swap/0` function must be called
+Defaults: view identity, projection an orthographic map of the pixel size
+(`0` to width, `0` to height, Y up), viewport the full size, blend mode
+`none`, depth test `enabled`. Overlapping 2D draws share Z, so disable the
+depth test. Transparent 2D also needs blend mode `alpha`.
 
 ```erlang
-surface:swap(S).
+{ok, Surface} = surface:set_depth_test(Surface, disabled).
 ```
 
-It will wait until the rendering is finished.
+Viewport, blend, depth, view, and projection live on the Erlang term. Setters
+return `{ok, NewTarget}`. Rebind the variable. The GPU sees the new values
+on the next `clear` or `draw`.
 
-## Transforming a 2D object
-
-You will want to describe the vertices of many 2D objects but it's
-inconvenient to describe them relative to each other. What if you want to draw
-the same object twice but at different positions.
-
-Instead, you want to describe them independently of each other and specify an
-additional parameter when drawing in order 'transform' them. One of the
-`draw/x` function supports a matrix parameter which specifies the 2D
-transformations to apply.
+When the image is ready:
 
 ```erlang
-Matrix = compute_transform_matrix(),
-surface:draw(S, V, P, Matrix).
+Image = surface:image(Surface),
+ok = surface:destroy(Surface),
+ok = graphics:terminate().
 ```
 
-However, to the average programmer, it's hard to
-compute the 3x3 matrix by hand, instead use `transform2`.
+On a window, call `surface:display/1` instead of (or before) reading pixels.
+After `display/1`, the window back buffer is undefined.
+
+See the `surface`, `frame`, and `graphics_context` modules.
+
+## Drawing with shapes
+
+A 2D shape is the usual drawable: one or more meshes, a 3x3 model matrix, and
+an optional texture. Primitive constructors allocate a mesh.
 
 ```erlang
-T1 = transform2:translation({50.0, 100.0}).
-surface:draw(S, V, T1).
-T2 = transform2:compose({100.0, 50.0}, math:pi() / 4.0, {2.0, 2.0}).
-surface:draw(S, V, T2).
+{ok, Triangle} = shape2:triangle(
+    {320.0, 360.0},
+    {220.0, 120.0},
+    {420.0, 120.0},
+    ?COLOR_RED
+),
+ok = surface:draw_shape2(Surface, Triangle),
+ok = shape2:destroy(Triangle).
 ```
 
-To be written.
+Shared primitives: `point/2`, `line/3`, `triangle/4`, `triangle_wires/4`.
 
-## Adjusting the 2D view
+2D-only primitives:
 
-Alternatively, you may also adjust the view of the surface before the
-rendering.
+- `rectangle/3`, `rectangle_outline/4`, `rectangle_wires/3` — minimum corner
+  and full size, extending `+X` / `+Y`
+- `circle/3,4`, `circle_outline/4,5`, `circle_wires/3,4` — center and radius,
+  default 32 segments
 
-The view of the surface was omitted until now because it was conveniently set
-to fit the area of the surface and use the coordinate we used until now.
+Outline thickness is signed. Positive grows inwards. Negative grows outwards.
+There is no 3D outline.
 
-See it as a camera that you may device to move using the
-`surface:set_view_matrix/x` function.
-Once more time, it expects a 3x3 matrix which is difficult to calculate. Instead
-we use the `view2`.
+Generated vertices use UV `{0.0, 0.0}`. Binding a texture therefore samples
+one texel. A textured rectangle is `sprite:from_texture/3`; see
+[Texturing](texturing.md).
+
+`destroy/1` destroys the meshes. It does not destroy the texture. Destroying
+the same shape twice is invalid.
+
+See the `shape2` module.
+
+## Drawing with meshes
+
+A 2D mesh is a GPU buffer of 2D vertices. Together with 3D meshes, meshes are
+the only means for rendering. Shapes, sprites, and text are wrappers around
+meshes.
+
+The primitive type and the texture are draw arguments, not mesh state.
 
 ```erlang
-V = view2:new({360, 240}, {360, 240}).
-surface:set_view(view2:matrix(V)).
+{ok, Mesh} = mesh2:with_vertices([
+    {{100.0, 100.0}, ?COLOR_RED, 0.0, 0.0},
+    {{300.0, 100.0}, ?COLOR_GREEN, 0.0, 0.0},
+    {{200.0, 250.0}, ?COLOR_BLUE, 0.0, 0.0}
+]),
+ok = surface:draw_mesh2(Surface, Mesh, triangles, 3),
+ok = mesh2:destroy(Mesh).
 ```
 
-To be written.
+Primitive types: `points`, `lines`, `line_strip`, `line_loop`, `triangles`,
+`triangle_strip`, `triangle_fan`.
 
-## Optimizing the drawing.
+Wrap a mesh as a shape when several draws should share a matrix and a
+texture:
 
-To be written.
+```erlang
+Shape = shape2:with_mesh(Mesh, triangles, 3).
+```
 
-## Advanced custom 2D rendering
+`with_mesh` does not allocate. The vertex count is the draw count. It is not
+required to equal `mesh2:vertex_count/1`.
 
-To be written.
+The default usage hint is `static`. The default copy policy is `no_copy`.
+See [Graphical Resources](graphical-resources.md) for usage hints, local
+copies, and ownership.
 
-## Bonus: rendering an image
+See the `mesh2` module.
 
-To be written.
+## Transforming
+
+Describe geometry in its own space. Move it with a model matrix.
+
+On a shape, `set_matrix/2` returns a new shape. The GPU buffers are not
+copied.
+
+```erlang
+{ok, Rect} = shape2:rectangle({-50.0, -25.0}, {100.0, 50.0}, ?COLOR_RED),
+Moved = shape2:set_matrix(Rect, transform2:translation({320.0, 240.0})),
+ok = surface:draw_shape2(Surface, Moved).
+```
+
+`compose/3` and `compose/4` cover origin, position, rotation, and scale:
+
+```erlang
+M = transform2:compose(
+    {50.0, 25.0},
+    {320.0, 240.0},
+    math:pi() / 8.0,
+    {1.0, 1.0}
+),
+Rotated = shape2:set_matrix(Rect, M).
+```
+
+`draw_mesh2/6` takes the 3x3 model matrix directly. Combinators post-multiply:
+
+```erlang
+M1 = transform2:translate(matrix3:identity(), {320.0, 240.0}),
+M2 = transform2:rotate(M1, math:pi() / 4.0),
+ok = surface:draw_mesh2(Surface, Mesh, triangles, 3, no_texture, M2).
+```
+
+See the `transform2` module.
+
+## Adjusting the view
+
+The default projection already maps pixel coordinates `(0, 0)` ..
+`(Width, Height)` with Y up and the view set to identity. Many 2D programs
+never change it.
+
+To choose a visible rectangle, set the projection from `view2`. To move the
+observer, set the view from `camera2`. Both matrices are 3x3. A surface and
+a frame store 4x4 view and projection uniforms; embed with
+`matrix3:to_matrix4/1`.
+
+```erlang
+{ok, Surface} = surface:set_projection_matrix(
+    Surface,
+    matrix3:to_matrix4(view2:orthographic(0.0, 640.0, 0.0, 480.0))
+),
+Camera = camera2:from_center({320.0, 240.0}, 0.0, 1.0),
+{ok, Surface} = surface:set_view_matrix(
+    Surface,
+    matrix3:to_matrix4(camera2:view_matrix(Camera))
+).
+```
+
+Swap Bottom and Top in `orthographic/4` to flip Y. A well-formed `box2`
+cannot represent that flip; use the four-argument form.
+
+Draw-target state is applied at clear and draw time:
+
+- `set_viewport/2` — lower-left origin, pixel units
+- `set_blend_mode/2` — `none | alpha | add | multiply`, default `none`
+- `set_depth_test/2` — `enabled | disabled`, default `enabled`
+
+Clearing writes the clear color directly. Blending does not affect `clear/2`.
+
+See the `view2`, `camera2`, and `surface` modules.
+
+## Next steps
+
+- [Texturing](texturing.md) — textures, sprites, and frames as textures
+- [Graphical Resources](graphical-resources.md) — ownership, `destroy/1`,
+  local copies
+- [Going Native](going-native.md) — custom programs and OpenGL commands
+- [3D Rendering](going-3d.md) — the same outline in three dimensions
+- [Fancy Shapes](fancy-shapes.md) and [Text Rendering](text-rendering.md) —
+  companion libraries

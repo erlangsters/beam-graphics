@@ -13,13 +13,13 @@
 The missing graphics library of the BEAM ecosystem available for the Erlang and
 Elixir programming language.
 
-Inspired by leading multimedia frameworks, it provides a general-purpose API 
-for graphics rendering. It's is built on top of EGL and OpenGL ES, and all 
-major platforms are supported.
+Inspired by leading multimedia frameworks, it provides a general-purpose API
+for graphics rendering. It is built on top of EGL and OpenGL, and all major
+platforms are supported.
 
-> It does not provide any window capabilities. You may want to use 
-> the [GLFW](https://github.com/erlangsters/glfw) to display the graphics on 
-> the screen.
+> It does not provide any window capabilities. You may want to use
+> [GLFW](https://github.com/erlangsters/glfw) to display the graphics on
+> the screen. See [Display on a Window](docs/display-window.md).
 
 Companion libraries that extend it are also available.
 
@@ -27,175 +27,232 @@ Companion libraries that extend it are also available.
 - Image loader/saver: https://github.com/erlangsters/beam-graphics-image
 - Text rendering: https://github.com/erlangsters/beam-graphics-text
 
-For advanced uses, interpolation with the underlying OpenGL library is also 
-possible.
+For advanced uses, mixing with the underlying OpenGL library is also
+possible. See [Going Native](docs/going-native.md).
 
 Written by the Erlangsters [community](https://about.erlangsters.org/) and
-released under the MIT [license](/https://opensource.org/license/mit).
+released under the MIT [license](https://opensource.org/license/mit).
+
+## Using it in your project
+
+With the **Rebar3** build system, add the following to the `rebar.config` file
+of your project.
+
+```erlang
+{deps, [
+    {beam_graphics, {git, "https://github.com/erlangsters/beam-graphics.git", {tag, "master"}}}
+]}.
+```
+
+In practice, you want to replace the branch "master" with a specific tag to
+avoid breaking your project if incompatible changes are made.
+
+Named colors and matrix macros live in `graphics.hrl`.
+
+```erlang
+-include_lib("beam_graphics/include/graphics.hrl").
+```
 
 ## Getting started
 
-To render anything, you must first create a surface which will contain the 
-result of whatever you're rendering (be it a 2D or 3D object).
+Start an EGL display and the graphics context. Then create a surface, which
+is a presentable 2D image used as a render target.
 
 ```erlang
-{ok, Surface} = surface:new({640, 480}).
+Display = egl:get_display(default_display),
+{ok, {_, _}} = egl:initialize(Display),
+ok = graphics:initialize(Display),
+
+{ok, Surface} = surface:with_size(Display, {640, 480}).
 ```
 
-> See a surface as a 2D image actually. 
-
-Almost always, you want to fill the surface with an even color first.
+A running graphics context is required. The default projection maps pixel
+coordinates with Y up. The default depth test is `enabled`. Overlapping 2D
+draws share Z, so disable it before drawing 2D.
 
 ```erlang
-ok = surface:erase(Surface, ?COLOR_BLACK).
+{ok, Surface} = surface:set_depth_test(Surface, disabled),
+ok = surface:clear(Surface, ?COLOR_BLACK),
+
+{ok, Triangle} = shape2:triangle(
+    {320.0, 360.0},
+    {220.0, 120.0},
+    {420.0, 120.0},
+    ?COLOR_RED
+),
+ok = surface:draw_shape2(Surface, Triangle),
+Image = surface:image(Surface),
+
+ok = shape2:destroy(Triangle),
+ok = surface:destroy(Surface),
+ok = graphics:terminate().
 ```
 
-The actual rendering is covered in one of the sections below, depending on
-whether you're interested in rendering [2D objects](#going-2d) or
-[3D objects](#going-3d).
+A frame is an offscreen target whose result is a texture. Both a surface and
+a frame accept 2D and 3D draws. Viewport, blend, depth, view, and projection
+live on the draw-target term; setters return `{ok, NewTarget}`. Rebind the
+variable.
 
-When you're done, use the swap operation in order to wait until all rendering
-operations are executed and the surface contains the result.
+Beware that a well-formed position, matrix, and color always use floats, not
+integers.
 
-```erlang
-ok = surface:swap(S).
-```
+The rest of this page continues from a live `Display` and `Surface`. The
+guides cover the same ground in more detail:
 
-With the surface containing the final result, you're ready to display it on a
-window, or save it as an image on disk, or even re-use it for further rendering
-(such as in a texture).
-
-Read the documentation which covers the entire foo, bar, quz.
+- [2D Rendering](docs/going-2d.md)
+- [3D Rendering](docs/going-3d.md)
+- [Texturing](docs/texturing.md)
+- [Graphical Resources](docs/graphical-resources.md)
 
 ## Going 2D
 
-The following snippet of code showcases the use of the library for 2D
-rendering.
+A 2D shape is the usual drawable. Describe it in its own space and move it
+with a model matrix. `set_matrix/2` returns a new shape; the GPU buffers are
+not copied.
 
 ```erlang
-View = view2:new({0, 0}, {320, 240}),
-
-surface:set_view(View)
-Square = [
-  {1, 2, 3, 0, 0, ?COLOR_RED},
-  {1, 2, 3, 0, 0, ?COLOR_RED},
-  {1, 2, 3, 0, 0, ?COLOR_RED},
-  {1, 2, 3, 0, 0, ?COLOR_RED}
-],
-
-surface:draw(strip_triangle, Square),
-
-surface:swap()
-Image = surface:to_image(),
-
-display_image(Image)
+{ok, Rect} = shape2:rectangle({-50.0, -25.0}, {100.0, 50.0}, ?COLOR_RED),
+Moved = shape2:set_matrix(Rect, transform2:translation({320.0, 240.0})),
+ok = surface:draw_shape2(Surface, Moved),
+ok = shape2:destroy(Rect).
 ```
 
-See the section below for the implementation of the `display_image/1` function.
+A 2D view is a projection. A 2D camera is an observer. Both are 3x3 matrices.
+A surface stores 4x4 view and projection uniforms; embed with
+`matrix3:to_matrix4/1`.
+
+```erlang
+{ok, Surface} = surface:set_projection_matrix(
+    Surface,
+    matrix3:to_matrix4(view2:orthographic(0.0, 640.0, 0.0, 480.0))
+),
+Camera = camera2:from_center({320.0, 240.0}),
+{ok, Surface} = surface:set_view_matrix(
+    Surface,
+    matrix3:to_matrix4(camera2:view_matrix(Camera))
+).
+```
+
+Meshes are the GPU buffers underneath. Primitive type and texture are draw
+arguments, not mesh state. See [2D Rendering](docs/going-2d.md).
 
 ## Going 3D
 
-The following snippet of code showcases the use of the library for 3D
-rendering.
+Replace the default pixel projection with a perspective view and a look-at
+camera. Keep the depth test enabled.
 
 ```erlang
-surface:new({640, 480}).
-
-View = view3:new({0, 0}, {320, 240}),
-surface:set_view(View)
-
-Cube = [
-    {1, 2, 3, 0, 0, ?COLOR_RED},
-    {1, 2, 3, 0, 0, ?COLOR_RED},
-    {1, 2, 3, 0, 0, ?COLOR_RED},
-    {1, 2, 3, 0, 0, ?COLOR_RED}
-],
-
-surface:draw(strip_triangle, Square),
-
-surface:swap()
-Image = surface:to_image(),
-
-display_image(Image)
+{ok, Surface} = surface:set_depth_test(Surface, enabled),
+{ok, Surface} = surface:set_projection_matrix(
+    Surface,
+    view3:perspective(math:pi() / 4.0, 640.0 / 480.0, 0.1, 100.0)
+),
+Camera = camera3:look_at({0.0, 0.0, 5.0}, {0.0, 0.0, 0.0}),
+{ok, Surface} = surface:set_view_matrix(
+    Surface,
+    camera3:view_matrix(Camera)
+),
+{ok, Cube} = shape3:cube({0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, ?COLOR_RED),
+ok = surface:draw_shape3(Surface, Cube),
+ok = shape3:destroy(Cube).
 ```
 
-See the section below for the implementation of the `display_image/1` function.
+A sprite is a 2D rectangle. Textured 3D geometry is built with
+`shape3:with_mesh/4`. See [3D Rendering](docs/going-3d.md).
 
 ## Displaying an image
 
-The previous snippets of code show rendering is done on a surface and then how
-pixels (=image) are retrieved. Because the graphics library is designed to be
-minimal, there is no built-in ways to display the results. For that you must
-either use the window library to display on a window, or you can save the result
-an on disk image.
+Rendering is done on a surface. This library does not create windows and it
+does not encode image files.
 
-Displaying on a window.
+To present on a window, create a GLFW window and attach a surface to its EGL
+handle. `display/1` presents. After it, the window back buffer is undefined.
 
 ```erlang
-display_image(Image) ->
-  {ok, Window} = window:new({640, 480}, "Result"),
-  Surface = window:surface(Window),
-  surface:update_with_image(Image),
-  window:swap()
-  timer:sleep(infinity).
-
+true = glfw:init(),
+{ok, Window} = glfw:create_window(640, 480, "beam-graphics"),
+Handle = glfw:window_egl_handle(Window),
+{ok, Surface} = surface:with_window(Display, Handle, {640, 480}),
+ok = surface:clear(Surface, ?COLOR_BLACK),
+ok = surface:draw_shape2(Surface, Shape),
+ok = surface:display(Surface).
 ```
 
-Saving pixels to image.
+See [Display on a Window](docs/display-window.md).
+
+To save pixels, read the surface and encode with
+[beam-graphics-image](https://github.com/erlangsters/beam-graphics-image).
 
 ```erlang
-save_to_disk(Image, png) ->
-  image_png:save(Image, "result.png");
-save_to_disk(Image, jpeg) ->
-  image_png:save(Image, "result.jpeg");
-save_to_disk(Image, bmp) ->
-  image_png:save(Image, "result.bmp").
+Image = surface:image(Surface),
+ok = image_png:save(Image, "screenshot.png").
 ```
-8
-To be written.
+
+An offscreen GPU target with no CPU round-trip is a `frame`. Sample
+`frame:texture/1` later. See [Texturing](docs/texturing.md).
 
 ## Going native
 
-The library is designed to eliminate the need of writing a rendering pipeline
-and having to write complex mathematical operation, but it does not mean it
-keeps you from doing in it. In fact, it's equally designed for addvanced
-rendering.
+The stock pipeline covers position, color, UV, a model matrix, a view, a
+projection, and an optional texture. Draw does not take a program.
 
-First, you will want to know the underlying OpenGL-related infos that graphics
-library was initialized with.
-
-```erlang
-beam_graphics:info().
-```
-
-Instead of relying on the default rendering pipeline, you start with creating
-your own, that is, a shader program.
+To compile your own shaders, build a `program` and issue OpenGL commands
+while the intended context is current. On a surface that is `gl_commands/2`.
+On the graphics context, and on a frame, that is `execute_commands/1`.
 
 ```erlang
-shader:new(Vertex, Fragment).
+{ok, Program} = program:with_shaders(VertexSrc, FragmentSrc),
+ok = program:set_uniform(Program, "uModel", matrix4:identity()),
+_ = surface:gl_commands(Surface, fun() ->
+    ok = gl:use_program(program:gl_object(Program)),
+    ok
+end),
+ok = program:destroy(Program).
 ```
 
-From there on, you're in control of the coordinates system and know how to feed
-it with data.
+Uniform writes through `program:set_uniform/3` hop to the graphics context.
+They are not reliably visible on a surface context. Set uniforms with
+`gl:program_uniform*` inside `gl_commands/2` when drawing on a surface.
 
-Instead of setting the view of a surface (transformations is now done in your
-shader), you adjust the viewport.
-
-```erlang
-surface:set_viewport(S, {1, 2, 3, 4}).
-```
-
-Now you're ready to draw vertices using your program.
-
-```erlang
-surface:draw(S, V, Shader).
-```
-
-An entire section in the documentation is dedicated to advanced rendering by
-showing you, and foo and bar.
+See [Going Native](docs/going-native.md).
 
 ## Companion libraries
 
-To be written.
+Core primitives stay small: point, line, triangle, plus rectangle and circle
+in 2D and cube and sphere in 3D. The broader catalog is
+[beam-graphics-shapes](https://github.com/erlangsters/beam-graphics-shapes).
+Those modules construct a core `graphics:shape2()` or `graphics:shape3()`.
 
-If you have written a librairies that nicely complement 
+```erlang
+{ok, Ellipse} = shape2_ellipse:solid({320.0, 240.0}, {80.0, 40.0}, ?COLOR_RED),
+ok = surface:draw_shape2(Surface, Ellipse),
+ok = shape2:destroy(Ellipse).
+```
+
+See [Fancy Shapes](docs/fancy-shapes.md).
+
+[beam-graphics-image](https://github.com/erlangsters/beam-graphics-image)
+decodes and encodes PNG, JPEG, and BMP as a `graphics:image()`. It does not
+create a GPU texture.
+
+```erlang
+{ok, Image} = image_png:load("sprite.png"),
+{ok, Texture} = texture:with_image(Image).
+```
+
+See [Texturing](docs/texturing.md).
+
+[beam-graphics-text](https://github.com/erlangsters/beam-graphics-text) loads
+a font and constructs a `graphics:shape2()` of glyph quads. Draw with blend
+mode `alpha`. The font owns the atlas texture; the text shape does not.
+
+```erlang
+{ok, Font} = graphics_font:from_file("font.ttf", 32.0),
+{ok, Shape} = graphics_text:from_string(Font, {0.0, 0.0}, "Hello", ?COLOR_WHITE),
+{ok, Surface} = surface:set_blend_mode(Surface, alpha),
+ok = surface:draw_shape2(Surface, Shape),
+ok = shape2:destroy(Shape),
+ok = graphics_font:destroy(Font).
+```
+
+See [Text Rendering](docs/text-rendering.md).

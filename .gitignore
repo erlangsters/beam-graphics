@@ -1,5 +1,6 @@
 .rebar3
 _build
+doc
 _checkouts
 _vendor
 .eunit
