@@ -42,7 +42,7 @@ does not destroy the texture.
 
 Generated primitives are solid color. Their vertices use UV coordinates
 `(0.0, 0.0)`. A texture bound with `set_texture/2` therefore samples a single
-texel. Textured quads are built with `with_mesh/4` or `sprite`.
+texel. Textured quads are built with `with_mesh/4` or `sprite:from_texture`.
 
 A rectangle is positioned by its minimum corner. A circle is positioned by its
 center. Outline thickness is signed: positive grows inwards, negative grows

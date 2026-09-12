@@ -21,6 +21,7 @@
         texture,
         program,
         shape2, shape3,
+        sprite,
         camera2, camera3,
         surface,
         frame
