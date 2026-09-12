@@ -342,9 +342,12 @@ target.
 }.
 
 -doc """
-To be written.
+Surface object.
 
-To be written.
+A presentable 2D image that can be used as a render target. The result is
+shown with `surface:display/1` or read back with `surface:image/1`.
+
+Use the `surface` module to create and manipulate surfaces.
 """.
 -type surface() :: surface:object().
 
